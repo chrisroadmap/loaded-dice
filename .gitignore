@@ -2,6 +2,10 @@
 .DS_Store
 Thumbs.db
 
+# large input files
+data_input/rcmip
+data_input/fair-calibration
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
