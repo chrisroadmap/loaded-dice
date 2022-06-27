@@ -5,6 +5,7 @@ channels:
   - defaults
 dependencies:
   - climateforcing==0.2.3
+  - fair==1.6.4
   - matplotlib
   - numpy
   - pandas
