@@ -1,0 +1,11 @@
+name: loaded-dice
+channels:
+  - chrisroadmap
+  - conda-forge
+  - defaults
+dependencies:
+  - climateforcing==0.2.3
+  - matplotlib
+  - numpy
+  - pandas
+  - scipy
