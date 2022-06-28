@@ -2,6 +2,11 @@
 .DS_Store
 Thumbs.db
 
+# GAMS testing
+*.lst
+scripts/*.csv
+scripts/*.*log*
+
 # large input files
 data_input/rcmip
 data_input/fair-1.6.2

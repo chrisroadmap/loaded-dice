@@ -1,4 +1,12 @@
+import os
 import subprocess
+
+from climateforcing.utils import mkdir_p
+
+here = os.path.dirname(os.path.realpath(__file__))
+
+mkdir_p(os.path.join(here, '..', 'data_output', 'dice'))
+
 
 template = f"""
 $ontext
@@ -373,7 +381,7 @@ ppm(t)        = mat.l(t)/2.124;
 * For ALL relevant model outputs, see 'PutOutputAllT.gms' in the Include folder.
 * The statement at the end of the *.lst file "Output..." will tell you where to find the file.
 
-file results /Dice2016R-FaIR.csv/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
+file results /"../data_output/dice/{irun:.04d}.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
 put results;
 put // "Period";
 Loop (T, put T.val);
