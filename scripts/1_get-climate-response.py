@@ -16,7 +16,7 @@ with open(os.path.join(here, '..', 'data_input', 'fair-1.6.2', 'fair-1.6.2-wg3-p
 # required for running DICE
 tstep = 5
 n_box = 2
-output=np.zeros((2237, 6))
+output=np.zeros((2237, 7))
 
 for i in tqdm(range(2237)):
     # need edit to heat capacities (W m-2 K-1 yr)
@@ -59,6 +59,7 @@ for i in tqdm(range(2237)):
         solution5[yr, :] = eb_matrix_d @ solution5[yr-1, :] + forcing_vector_d * f2x
     output[i, 0:4] = eb_matrix_d.ravel()
     output[i, 4:6] = forcing_vector_d
+    output[i, 6] = f2x
 
-df = pd.DataFrame(output, columns=['a11','a12','a21','a22','b1','b2'])
+df = pd.DataFrame(output, columns=['a11','a12','a21','a22','b1','b2','f2x'])
 df.to_csv(os.path.join(here, '..', 'data_output', 'climate_response_params.csv'))
