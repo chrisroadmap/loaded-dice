@@ -1,14 +1,42 @@
+import json
 import os
 import subprocess
 
+from tqdm import tqdm
+import pandas as pd
 from climateforcing.utils import mkdir_p
+import fair
+
+class InfeasibleSolutionError(Exception):
+    def __init__(self, run):
+        print(f"Infeasible solution in run number {run}.")
 
 here = os.path.dirname(os.path.realpath(__file__))
 
+with open(os.path.join(here, '..', 'data_input', 'fair-1.6.2', 'fair-1.6.2-wg3-params.json')) as f:
+    config_list = json.load(f)
+ensemble_size=len(config_list)
+
+mkdir_p(os.path.join(here, 'gams_scripts'))
 mkdir_p(os.path.join(here, '..', 'data_output', 'dice'))
 
+# TODO: rename output CSVs and different index column
+df_t2 = pd.read_csv(os.path.join(here, '..', 'data_input', 'wg1', 'temperature_ocean_2015.csv'))
+df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'anthropogenic-non-co2-forcing.csv'), index_col=0)
+df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'carbon-boxes.csv'), index_col=0)
+df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_response_params.csv'), index_col=0)
+df_cc = pd.read_csv(os.path.join(here, '..', 'data_output', 'cc-feedbacks.csv'), index_col=0)
+df_t1 = pd.read_csv(os.path.join(here, '..', 'data_output', 'temperature.csv'), index_col=0)
 
-template = f"""
+for run in tqdm(range(ensemble_size)):
+    t2 = df_t2.loc[run].values[0]
+    foth = df_nonco2.iloc[:,run].values
+    cbox = df_cbox.loc[run].values
+    cr = df_cr.loc[run].values
+    cc = df_cc.loc[run].values
+    t1 = df_t1.loc[run].values[0]
+
+    template = f'''
 $ontext
 DICE with FaIR carbon cycle and climate response.
 
@@ -53,24 +81,24 @@ PARAMETERS
         e0       Industrial emissions 2015 (GtCO2 per year)            /35.85/
         miu0     Initial emissions control rate for base case 2015     /0.03/
 * Initial Conditions
-        mat0     Initial Concentration in atmosphere 2015 (GtC)        /851/
-        mateq    Equilibrium concentration atmosphere  (GtC)           /588/
+        mat0     Initial Concentration in atmosphere 2015 (GtC)        /{cc[3]*fair.constants.general.ppm_gtc+cbox.sum()}/
+        mateq    Equilibrium concentration atmosphere  (GtC)           /{cc[3]*fair.constants.general.ppm_gtc}/
 * These are for declaration and are defined later
         sig0     Carbon intensity 2010 (kgCO2 per output 2005 USD 2010)
 ** Climate model parameters
         g0       Carbon cycle parameter (Leach et al. 2021)
         g1       Carbon cycle parameter (Leach et al. 2021)
-        r0       Pre-industrial time-integrated airborne fraction      /32.71/
-        rc       Sensitivity of airborne fraction with cumulative CO2  /0.0249/
-        rt       Sensitivity of airborne fraction with temperature     /2.143/
+        r0       Pre-industrial time-integrated airborne fraction      /{cc[0]}/
+        rc       Sensitivity of airborne fraction with cumulative CO2  /{cc[1]}/
+        rt       Sensitivity of airborne fraction with temperature     /{cc[2]}/
         tau(box) Lifetimes of the four atmospheric carbon boxes
                      / 1 1e9, 2 394.4, 3 36.54, 4 4.304 /
         a(box)   Partition fraction of the four atmospheric carbon boxes
                      / 1 0.2173, 2 0.2240, 3 0.2824, 4 0.2763 /
-        ICBOX1   Initial GtC concentration of carbon box 1 in 2015     /{box1}/
-        ICBOX2   Initial GtC concentration of carbon box 2 in 2015     /{box2}/
-        ICBOX3   Initial GtC concentration of carbon box 3 in 2015     /{box3}/
-        ICBOX4   Initial GtC concentration of carbon box 4 in 2015     /{box4}/
+        ICBOX1   Initial GtC concentration of carbon box 1 in 2015     /{cbox[0]}/
+        ICBOX2   Initial GtC concentration of carbon box 2 in 2015     /{cbox[1]}/
+        ICBOX3   Initial GtC concentration of carbon box 3 in 2015     /{cbox[2]}/
+        ICBOX4   Initial GtC concentration of carbon box 4 in 2015     /{cbox[3]}/
         forcoth(t) /1 {foth[0]}, 2 {foth[1]}, 3 {foth[2]}, 4 {foth[3]}, 5 {foth[4]},
                   6 {foth[5]}, 7 {foth[6]}, 8 {foth[7]}, 9 {foth[8]}, 10 {foth[9]},
                   11 {foth[10]}, 12 {foth[11]}, 13 {foth[12]}, 14 {foth[13]}, 15 {foth[14]},
@@ -92,15 +120,15 @@ PARAMETERS
                   91 {foth[90]}, 92 {foth[91]}, 93 {foth[92]}, 94 {foth[93]}, 95 {foth[94]},
                   96 {foth[95]}, 97 {foth[96]}, 98 {foth[97]}, 99 {foth[98]}, 100 {foth[99]}/
         iirf_horizon Time horizon for IIRF in yr                       /100/
-        tocean0  two-layer "deep ocean" temperature change             /0.222/
-        tatm0    two-layer "surface" temperature change                /1.109/
-        fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /3.934/
-        EBM_A11  Fast component of mixed layer temperature             /0.2406594/
-        EBM_A12  Slow component of mixed layer temperature             /0.30716641/
-        EBM_A21  Fast component of deep ocean temperature              /0.01562104/
-        EBM_A22  Slow component of deep ocean temperature              /0.97614564/
-        EBM_B1   Forcing contribution to mixed layer                   /0.34517113/
-        EBM_B2   Forcing component to ocean layer                      /0.00628497/
+        tocean0  two-layer "deep ocean" temperature change             /{t2*0.85/0.881}/
+        tatm0    two-layer "surface" temperature change                /{t1}/
+        fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /{cr[6]}/
+        EBM_A11  Fast component of mixed layer temperature             /{cr[0]}/
+        EBM_A12  Slow component of mixed layer temperature             /{cr[1]}/
+        EBM_A21  Fast component of deep ocean temperature              /{cr[2]}/
+        EBM_A22  Slow component of deep ocean temperature              /{cr[3]}/
+        EBM_B1   Forcing contribution to mixed layer                   /{cr[4]}/
+        EBM_B2   Forcing component to ocean layer                      /{cr[5]}/
 ** Climate damage parameters
         a10      Initial damage intercept                              /0/
         a20      Initial damage quadratic term
@@ -177,7 +205,6 @@ PARAMETERS
         cumetree("1")= 100; loop(t,cumetree(t+1)=cumetree(t)+etree(t)*(5/3.666););
 
         rr(t) = 1/((1+prstp)**(tstep*(t.val-1)));
-        forcoth(t) = fex0+ (1/17)*(fex1-fex0)*(t.val-1)$(t.val lt 18)+ (fex1-fex0)$(t.val ge 18);
         optlrsav = (dk + .004)/(dk + .004*elasmu + prstp)*gama;
 
 * Base Case Carbon Price
@@ -267,9 +294,9 @@ EQUATIONS
 * Emissions and Damages
  eeq(t)..             E(t)           =E= EIND(t) + etree(t);
  eindeq(t)..          EIND(t)        =E= sigma(t) * YGROSS(t) * (1-(MIU(t)));
- ccacca(t+1)..        CCA(t+1)       =E= CCA(t)+ EIND(t)*5/3.664;
+ ccacca(t+1)..        CCA(t+1)       =E= CCA(t)+ EIND(t)*tstep/3.664;
  ccatoteq(t)..        CCATOT(t)      =E= CCA(t)+cumetree(t);
- force(t)..           FORC(t)        =E= fco22x * ((log((MAT(t)/588.000))/log(2))) + forcoth(t);
+ force(t)..           FORC(t)        =E= fco22x * ((log((MAT(t)/mateq))/log(2))) + forcoth(t);
  damfraceq(t) ..      DAMFRAC(t)     =E= (a1*TATM(t))+(a2*TATM(t)**a3) ;
  dameq(t)..           DAMAGES(t)     =E= YGROSS(t) * DAMFRAC(t);
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
@@ -277,7 +304,7 @@ EQUATIONS
  carbpriceeq(t)..     CPRICE(t)      =E= pbacktime(t) * (MIU(t))**(expcost2-1);
 
 * Climate and carbon cycle
- atfraceq(t)..        atfrac(t)      =E= ((mat(t)-588)/(ccatot(t)+.000001));
+ atfraceq(t)..        atfrac(t)      =E= ((mat(t)-mateq)/(ccatot(t)+0.0000001));
  iirfeq(t)..          IIRF(t)        =E= r0 + rc * (1-atfrac(t)) * ccatot(t) + rt * tatm(t);
  alphaeq(t)..         ALPHA(t)       =E= g0 * exp(iirf(t)/g1);
  cbox1eq(t+1)..       CBOX1(t+1)     =E= a("1")*E(t)*tstep/3.664 + cbox1(t) * exp(-tstep/(alpha(t)*tau("1")));
@@ -286,7 +313,7 @@ EQUATIONS
  cbox4eq(t+1)..       CBOX4(t+1)     =E= a("4")*E(t)*tstep/3.664 + cbox4(t) * exp(-tstep/(alpha(t)*tau("4")));
  tatmeq(t+1)..        TATM(t+1)      =E= EBM_A11 * TATM(t) + EBM_A12 * TOCEAN(t) + EBM_B1 * FORC(t);
  toceaneq(t+1)..      TOCEAN(t+1)    =E= EBM_A21 * TATM(t) + EBM_A22 * TOCEAN(t) + EBM_B2 * FORC(t);
- mmat(t)..            MAT(t)         =E= 588 + cbox1(t) + cbox2(t) + cbox3(t) + cbox4(t);
+ mmat(t)..            MAT(t)         =E= mateq + cbox1(t) + cbox2(t) + cbox3(t) + cbox4(t);
 * constrainT(t)..      TATM(t)        =L= 2;
 
 * Economic variables
@@ -306,6 +333,7 @@ EQUATIONS
 
 * Resource limit
 CCA.up(t)             = fosslim;
+CCA.lo(t)             = 0;
 
 * Control rate limits
 MIU.up(t)             = limmiu;
@@ -313,6 +341,7 @@ MIU.up(t)$(t.val<30)  = 1;
 
 ** Upper and lower bounds for stability
 K.LO(t)         = 1;
+EIND.LO(t)      = -50;
 MAT.LO(t)       = 10;
 MU.LO(t)        = 100;
 ML.LO(t)        = 1000;
@@ -333,9 +362,9 @@ lag10(t) =  yes$(t.val gt card(t)-10);
 S.FX(lag10(t)) = optlrsav;
 
 * Initial conditions
-CCA.FX(tfirst)    = 400;
+CCA.FX(tfirst)    = 420.4902535;
 K.FX(tfirst)      = k0;
-MAT.l(tfirst)     = mat0;
+MAT.FX(tfirst)     = mat0;
 TATM.FX(tfirst)   = tatm0;
 TOCEAN.FX(tfirst) = tocean0;
 IIRF.l(tfirst)    = 50;
@@ -381,7 +410,7 @@ ppm(t)        = mat.l(t)/2.124;
 * For ALL relevant model outputs, see 'PutOutputAllT.gms' in the Include folder.
 * The statement at the end of the *.lst file "Output..." will tell you where to find the file.
 
-file results /"../data_output/dice/{irun:.04d}.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
+file results /"{here}/../data_output/dice/{run:04d}.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
 put results;
 put // "Period";
 Loop (T, put T.val);
@@ -470,4 +499,34 @@ Loop (T, put cbox4.l(t));
 put / "Objective" ;
 put utility.l;
 putclose;
-"""
+    '''
+
+    # write the script
+    with open(os.path.join(here, 'gams_scripts', f'run{run:04d}.gms'), 'w') as f:
+        f.write(template)
+
+    # run the command
+    with open(os.path.join(here, 'gams_scripts', f'run{run:04d}.out'), "w") as outfile:
+        subprocess.run(
+            [
+                'gams',
+                os.path.join(
+                    here,
+                    'gams_scripts',
+                    f'run{run:04d}.gms'
+                ),
+                '-o',
+                os.path.join(
+                    here,
+                    'gams_scripts',
+                    f'run{run:04d}.lst'
+                ),
+            ],
+            stdout = outfile,
+        )
+
+    # were results feasible?
+    with open(os.path.join(here, 'gams_scripts', f'run{run:04d}.lst')) as f:
+        output = f.read()
+        if " ** Infeasible solution. Reduced gradient less than tolerance." in output:
+            raise InfeasibleSolutionError(run)

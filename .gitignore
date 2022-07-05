@@ -4,8 +4,12 @@ Thumbs.db
 
 # GAMS testing
 *.lst
+*.out
 scripts/*.csv
 scripts/*.*log*
+
+# written scripts
+scripts/gams_scripts
 
 # large input files
 data_input/rcmip

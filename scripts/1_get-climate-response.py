@@ -55,8 +55,8 @@ for i in tqdm(range(2237)):
     forcing_vector_d
 
     solution5 = np.zeros((int(15000/tstep)+1, n_box))
-    for yr in range(1, len(solution5)):
-        solution5[yr, :] = eb_matrix_d @ solution5[yr-1, :] + forcing_vector_d * f2x
+#    for yr in range(1, len(solution5)):
+#        solution5[yr, :] = eb_matrix_d @ solution5[yr-1, :] + forcing_vector_d * f2x
     output[i, 0:4] = eb_matrix_d.ravel()
     output[i, 4:6] = forcing_vector_d
     output[i, 6] = f2x
