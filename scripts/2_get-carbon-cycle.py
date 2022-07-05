@@ -94,14 +94,15 @@ for i, specie in enumerate(species):
 with open(os.path.join(here, '..', 'data_input', 'fair-1.6.2', 'fair-1.6.2-wg3-params.json')) as f:
     config_list = json.load(f)
 
-cc_feedbacks=np.zeros((2237, 3))
+cc_feedbacks=np.zeros((2237, 4))
 for i in range(2237):
-    cc_feedbacks[i, 0], cc_feedbacks[i, 1], cc_feedbacks[i, 2] = (
+    cc_feedbacks[i, 0], cc_feedbacks[i, 1], cc_feedbacks[i, 2], cc_feedbacks[i, 3] = (
         config_list[i]['r0'],
         config_list[i]['rc'],
-        config_list[i]['rt']
+        config_list[i]['rt'],
+        config_list[i]['C_pi'][0]
     )
-df = pd.DataFrame(cc_feedbacks, columns=['r0', 'rc', 'rt'])
+df = pd.DataFrame(cc_feedbacks, columns=['r0', 'rc', 'rt', 'C_pi'])
 df.to_csv(os.path.join(here, '..', 'data_output', 'cc-feedbacks.csv'))
 
 # run fair in original impulse response mode for restarts
@@ -146,7 +147,7 @@ def run_fair(args):
         restart_out[0][0],
         restart_out[0][1],
         restart_out[0][2],
-        restart_out[0][3]
+        restart_out[0][3],
     )
 
 def fair_process(emissions):
@@ -158,7 +159,7 @@ def fair_process(emissions):
                 updated_config[i][key] = np.asarray(value)
             else:
                 updated_config[i][key] = value
-        updated_config[i]['emissions'] = emissions[:266]
+        updated_config[i]['emissions'] = emissions[:265]
         updated_config[i]['diagnostics'] = 'AR6'
         updated_config[i]["efficacy"] = np.ones(45)
         updated_config[i]["gir_carbon_cycle"] = True
@@ -166,11 +167,11 @@ def fair_process(emissions):
         updated_config[i]["aerosol_forcing"] = "aerocom+ghan2"
         updated_config[i]["fixPre1850RCP"] = False
         updated_config[i]["restart_out"] = True
-        solar_truncated = updated_config[i]["F_solar"][:266]
+        solar_truncated = updated_config[i]["F_solar"][:265]
         updated_config[i]['F_solar'] = solar_truncated
-        volcanic_truncated = updated_config[i]["F_volcanic"][:266]
+        volcanic_truncated = updated_config[i]["F_volcanic"][:265]
         updated_config[i]['F_volcanic'] = volcanic_truncated
-        nat_truncated = updated_config[i]['natural'][:266, :]
+        nat_truncated = updated_config[i]['natural'][:265, :]
         updated_config[i]['natural'] = nat_truncated
         out = _calculate_geoffroy_helper_parameters(
             cfg['ocean_heat_capacity'][0],
