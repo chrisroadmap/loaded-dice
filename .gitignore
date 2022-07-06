@@ -12,15 +12,15 @@ scripts/*.*log*
 scripts/gams_scripts
 
 # latex generated files
-manuscript/*.aux
-manuscript/*.bbl
-manuscript/*.blg
-manuscript/*.dvi
-manuscript/*.log
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.log
 #manuscript/*.pdf
-manuscript/*.ps
-manuscript/*.synctex.gz
-manuscript/*.tex~
+*.ps
+*.synctex.gz
+*.tex~
 
 # large input files
 data_input/rcmip
