@@ -17,6 +17,7 @@ outputs['T'] = np.ones((100, ensemble_size))
 outputs['carbon_price'] = np.ones((100, ensemble_size))
 outputs['SCC'] = np.ones((100, ensemble_size))
 outputs['E'] = np.ones((100, ensemble_size))
+outputs['F'] = np.ones((100, ensemble_size))
 
 pl.rcParams['figure.figsize'] = (12/2.54, 12/2.54)
 pl.rcParams['font.size'] = 9
@@ -43,6 +44,12 @@ for run in range(ensemble_size):
     outputs['carbon_price'][:, run] = dfs[run].loc['Carbon Price (per t CO2)']
     outputs['SCC'][:, run] = dfs[run].loc['Social cost of carbon']
     outputs['E'][:, run] = dfs[run].loc['Industrial Emissions GTCO2 per year']
+    outputs['F'][:, run] = dfs[run].loc['Forcings']
+
+print(np.percentile(outputs['E'][17, :], (5, 50, 95)))  # CO2 fossil emissions 2100
+print(np.percentile(outputs['SCC'][1, :], (5, 50, 95))) # social cost of carbon 2020
+print(np.percentile(outputs['T'][17, :], (5, 50, 95)))  # temperature 2100
+print(np.percentile(outputs['F'][17, :], (5, 50, 95)))  # radiative forcing 2100
 
 fig, ax = pl.subplots(2,2)
 
