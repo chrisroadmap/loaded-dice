@@ -7,10 +7,6 @@ import pandas as pd
 from climateforcing.utils import mkdir_p
 import fair
 
-class InfeasibleSolutionError(Exception):
-    def __init__(self, run):
-        print(f"Infeasible solution in run number {run}.")
-
 here = os.path.dirname(os.path.realpath(__file__))
 
 with open(os.path.join(here, '..', 'data_input', 'fair-1.6.2', 'fair-1.6.2-wg3-params.json')) as f:
@@ -18,7 +14,7 @@ with open(os.path.join(here, '..', 'data_input', 'fair-1.6.2', 'fair-1.6.2-wg3-p
 ensemble_size=len(config_list)
 
 mkdir_p(os.path.join(here, 'gams_scripts'))
-mkdir_p(os.path.join(here, '..', 'data_output', 'dice'))
+mkdir_p(os.path.join(here, '..', 'data_output', 'dice_below2deg'))
 
 # TODO: rename output CSVs and different index column
 df_t2 = pd.read_csv(os.path.join(here, '..', 'data_input', 'wg1', 'temperature_ocean_2015.csv'))
@@ -27,6 +23,8 @@ df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'carbon-boxes.csv'
 df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_response_params.csv'), index_col=0)
 df_cc = pd.read_csv(os.path.join(here, '..', 'data_output', 'cc-feedbacks.csv'), index_col=0)
 df_t1 = pd.read_csv(os.path.join(here, '..', 'data_output', 'temperature.csv'), index_col=0)
+
+infeas = 0
 
 for run in tqdm(range(ensemble_size)):
     t2 = df_t2.loc[run].values[0]
@@ -410,7 +408,7 @@ ppm(t)        = mat.l(t)/2.124;
 * For ALL relevant model outputs, see 'PutOutputAllT.gms' in the Include folder.
 * The statement at the end of the *.lst file "Output..." will tell you where to find the file.
 
-file results /"{here}/../data_output/dice/{run:04d}.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
+file results /"{here}/../data_output/dice_below2deg/{run:04d}.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
 put results;
 put // "Period";
 Loop (T, put T.val);
@@ -529,4 +527,10 @@ putclose;
     with open(os.path.join(here, 'gams_scripts', f'run{run:04d}.lst')) as f:
         output = f.read()
         if " ** Infeasible solution. Reduced gradient less than tolerance." in output:
-            raise InfeasibleSolutionError(run)
+            # don't raise an error but keep a tally
+            infeas = infeas + 1
+
+            # delete output csv as nonsense
+            os.remove(os.path.join(here, '..', 'data_output', 'dice_below2deg', f'{run:04d}.csv'))
+
+print(f'{infeas} out of 2237 were infeasible')
