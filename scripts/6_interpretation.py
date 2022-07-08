@@ -1,3 +1,4 @@
+import json
 import os
 
 from climateforcing.utils import mkdir_p
@@ -12,12 +13,13 @@ mkdir_p(os.path.join(here, '..', 'figures'))
 ensemble_size=2237
 
 outputs = {}
-outputs['CO2'] = np.ones((100, ensemble_size))
-outputs['T'] = np.ones((100, ensemble_size))
-outputs['carbon_price'] = np.ones((100, ensemble_size))
-outputs['SCC'] = np.ones((100, ensemble_size))
-outputs['E'] = np.ones((100, ensemble_size))
-outputs['F'] = np.ones((100, ensemble_size))
+outputs['CO2'] = np.ones((100, ensemble_size)) * np.nan
+outputs['T'] = np.ones((100, ensemble_size)) * np.nan
+outputs['carbon_price'] = np.ones((100, ensemble_size)) * np.nan
+outputs['SCC'] = np.ones((100, ensemble_size)) * np.nan
+outputs['E'] = np.ones((100, ensemble_size)) * np.nan
+outputs['F'] = np.ones((100, ensemble_size)) * np.nan
+outputs['ECS'] = np.ones(ensemble_size) * np.nan
 
 pl.rcParams['figure.figsize'] = (12/2.54, 12/2.54)
 pl.rcParams['font.size'] = 9
@@ -34,6 +36,9 @@ pl.rcParams['axes.spines.top'] = True
 pl.rcParams['axes.spines.bottom'] = True
 pl.rcParams['figure.dpi'] = 150
 
+with open(os.path.join(here, '..', 'data_input', 'fair-1.6.2', 'fair-1.6.2-wg3-params.json')) as f:
+    config_list = json.load(f)
+
 dfs = []
 for run in range(ensemble_size):
     dfs.append(pd.read_csv(os.path.join(here, "..", "data_output", "dice", f"{run:04d}.csv"), index_col=0))
@@ -45,6 +50,7 @@ for run in range(ensemble_size):
     outputs['SCC'][:, run] = dfs[run].loc['Social cost of carbon']
     outputs['E'][:, run] = dfs[run].loc['Industrial Emissions GTCO2 per year']
     outputs['F'][:, run] = dfs[run].loc['Forcings']
+    outputs['ECS'][run] = config_list[run]['F2x']/config_list[run]['lambda_global']
 
 print(np.percentile(outputs['E'][17, :], (5, 50, 95)))  # CO2 fossil emissions 2100
 print(np.percentile(outputs['SCC'][1, :], (5, 50, 95))) # social cost of carbon 2020
@@ -98,6 +104,16 @@ pl.savefig(os.path.join(here, '..', 'figures', 'climate_projections.png'))
 pl.savefig(os.path.join(here, '..', 'figures', 'climate_projections.pdf'))
 pl.show()
 
+# correlations with ECS
+pl.scatter(outputs['CO2'][22, :], outputs['ECS'])
+pl.xlabel('CO2')
+pl.ylabel('ECS')
+pl.show()
+
+pl.scatter(outputs['SCC'][1, :], outputs['ECS'])
+pl.xlabel('Social cost of carbon, 2020')
+pl.ylabel('ECS')
+pl.show()
 
 #pl.hist(scc2020)
 #pl.show()
