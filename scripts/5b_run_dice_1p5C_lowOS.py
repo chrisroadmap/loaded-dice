@@ -531,11 +531,11 @@ putclose;
     # were results feasible?
     with open(os.path.join(here, 'gams_scripts', f'run{run:04d}.lst')) as f:
         output = f.read()
-        if " ** Infeasible solution. Reduced gradient less than tolerance." in output:
+        if "  0 INFEASIBLE" not in output:
             # don't raise an error but keep a tally
             infeas = infeas + 1
 
             # delete output csv as nonsense
             os.remove(os.path.join(here, '..', 'data_output', 'dice_1p5deglowOS', f'{run:04d}.csv'))
 
-print(f'{infeas} out of 2237 were infeasible')
+print(f'{infeas} out of {ensemble_size} were infeasible')
