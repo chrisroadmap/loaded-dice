@@ -8,6 +8,9 @@ Thumbs.db
 scripts/*.csv
 scripts/*.*log*
 
+# GAMS working files
+225a/
+
 # written scripts
 scripts/gams_scripts
 
