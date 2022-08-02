@@ -76,7 +76,8 @@ PARAMETERS
 ** Emissions parameters
         gsigma1  Initial growth of sigma (per year)                    /-0.0152/
         dsig     Decline rate of decarbonization (per period)          /-0.001/
-        eland0   Carbon emissions from land 2015 (GtCO2 per year)      /2.6/
+        eland0   Carbon emissions from land 2015 (GtCO2 per year)      /4.14/
+* Global Carbon Project 2021, average of 2010-2020 LUC emissions
         deland   Decline rate of land emissions (per period)           /0.115/
         e0       Industrial emissions 2015 (GtCO2 per year)            /35.85/
         miu0     Initial emissions control rate for base case 2015     /0.03/
@@ -202,7 +203,7 @@ PARAMETERS
         cost1(t) = pbacktime(t)*sigma(t)/expcost2/1000;
 
         etree(t) = eland0*(1-deland)**(t.val-1);
-        cumetree("1")= 100; loop(t,cumetree(t+1)=cumetree(t)+etree(t)*(5/3.666););
+        cumetree("1")= 186.3; loop(t,cumetree(t+1)=cumetree(t)+etree(t)*(5/3.664););
 
         rr(t) = 1/((1+prstp)**(tstep*(t.val-1)));
         optlrsav = (dk + .004)/(dk + .004*elasmu + prstp)*gama;
