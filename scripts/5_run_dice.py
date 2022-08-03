@@ -9,6 +9,12 @@ import pandas as pd
 # should really import these constants from FaIR
 carbon_convert = 5.1352 * 12.011 / 28.97
 
+        # etree(t) /1 3.51744, 2 3.259400999, 3 3.070393627, 4 2.881386254, 5 2.522849029,
+        #           6 2.164311804, 7 1.332614458, 8 0.500917111, 9 -0.519499069, 10 -1.53991525,
+        #           11 -1.875551834, 12 -2.211188418, 13 -2.804266635, 14 -3.397344852, 15 -3.857233478,
+        #           16 -4.317122105, 17 -4.558599537, 18 -4.800076969, 19 -4.320069272, 20 -3.840061575,
+        #           21 -3.360053878, 22 -2.880046181, 23 -2.400038485	-1.920030788	-1.440023091	-0.960015394	-0.480007697	0
+
 class InfeasibleSolutionError(Exception):
     def __init__(self, run):
         print(f"Infeasible solution in run number {run}.")
@@ -66,19 +72,14 @@ for run, config in tqdm(enumerate(configs[:n_configs]), total=n_configs):
     template = f'''
 $ontext
 DICE with FaIR carbon cycle and climate response.
-
 Climate module by Chris Smith, 28 June 2022. Economic model is unmodified from the
 beta version of DICE-2016R, by William Nordhaus, and downloaded from
 http://www.econ.yale.edu/~nordhaus/homepage/homepage/DICE2016R-091916ap.gms
-
 Version is DICE-2016R-091916ap.gms
 $offtext
-
 $title        DICE-2016R-FAIR June 2022
-
 set     t        Time periods (5 years per period)                     /1*100/
         box      Carbon box                                            /1*4/
-
 PARAMETERS
 ** Availability of fossil fuels
         fosslim  Maximum cumulative extraction fossil fuels (GtC)      /6000/
@@ -197,16 +198,13 @@ PARAMETERS
         tnopol    Period before which no emissions controls base       /45/
         cprice0   Initial base carbon price (2010$ per tCO2)           /2/
         gcprice   Growth rate of base carbon price per year            /.02/
-
 ** Scaling and inessential parameters
 * Note that these are unnecessary for the calculations
 * They ensure that MU of first period's consumption =1 and PV cons = PV utilty
         scale1      Multiplicative scaling coefficient                 /0.0302455265681763/
         scale2      Additive scaling coefficient                       /-10993.704/ ;
-
 * Program control variables
 sets    tfirst(t), tlast(t), tearly(t), tlate(t);
-
 PARAMETERS
         l(t)          Level of population and labor
         al(t)         Level of total factor productivity
@@ -217,8 +215,6 @@ PARAMETERS
         gl(t)         Growth rate of labor
         gcost1        Growth of cost factor
         gsig(t)       Change in sigma (cumulative improvement of energy efficiency)
-        etree(t)      Emissions from deforestation
-        cumetree(t)   Cumulative from land
         cost1(t)      Adjusted cost for backstop
         pbacktime(t)  Backstop price
         optlrsav      Optimal long-run savings rate used for transversality
@@ -248,7 +244,6 @@ PARAMETERS
         al("1") = a0; loop(t, al(t+1)=al(t)/((1-ga(t))););
         gsig("1")=gsigma1; loop(t,gsig(t+1)=gsig(t)*((1+dsig)**tstep) ;);
         sigma("1")=sig0;   loop(t,sigma(t+1)=(sigma(t)*exp(gsig(t)*tstep)););
-
         pbacktime(t)=pback*(1-gback)**(t.val-1);
         cost1(t) = pbacktime(t)*sigma(t)/expcost2/1000;
 
@@ -257,10 +252,9 @@ PARAMETERS
 
         rr(t) = 1/((1+prstp)**(tstep*(t.val-1)));
         optlrsav = (dk + .004)/(dk + .004*elasmu + prstp)*gama;
-
+        detree(t) = 1 - 1 / (1 + exp(-0.75*(t.val-23)));
 * Base Case Carbon Price
         cpricebase(t)= cprice0*(1+gcprice)**(5*(t.val-1));
-
 VARIABLES
         MIU(t)          Emission control rate GHGs
         FORC(t)         Increase in radiative forcing (watts per m2 from 1750)
@@ -270,6 +264,7 @@ VARIABLES
         co2(t)          Carbon concentration increase in atmosphere (GtC from 1750)
         E(t)            Total CO2 emissions (GtCO2 per year)
         EIND(t)         Industrial emissions (GtCO2 per year)
+        ETREE(t)        Land use emissions (GtCO2 per year)
         C(t)            Consumption (trillions 2005 US dollars per year)
         K(t)            Capital stock (trillions 2005 US dollars)
         CPC(t)          Per capita consumption (thousands 2005 USD per year)
@@ -302,6 +297,7 @@ NONNEGATIVE VARIABLES  MIU, T1, co2, MU, ML, Y, YGROSS, C, K, I, alpha;
 EQUATIONS
 *Emissions and Damages
         EEQ(t)          Emissions equation
+        EETREE(t)       Land use emissions
         EINDEQ(t)       Industrial emissions
         CCAEQ(t)       Cumulative industrial carbon emissions
         CCATOTEQ(t)     Cumulative total carbon emissions
@@ -311,7 +307,6 @@ EQUATIONS
         ABATEEQ(t)      Cost of emissions reductions equation
         MCABATEEQ(t)    Equation for MC abatement
         CARBPRICEEQ(t)  Carbon price equation from abatement
-
 *Climate and carbon cycle
         co2eq(t)         Atmospheric concentration equation
         ATFRACEQ(t)      Atmospheric airborne fraction equation
@@ -325,7 +320,6 @@ EQUATIONS
         CBOX3EQ(t)       Carbon box 3 equation
         CBOX4EQ(t)       Carbon box 4 equation
 *constrainT  if we want to e.g. limit warming to 2 degrees
-
 *Economic variables
         YGROSSEQ(t)      Output gross equation
         YNETEQ(t)        Output net of damages equation
@@ -335,12 +329,10 @@ EQUATIONS
         SEQ(t)           Savings rate equation
         KK(t)            Capital balance equation
         RIEQ(t)          Interest rate equation
-
 * Utility
         CEMUTOTPEREQ(t)  Period utility
         PERIODUEQ(t)     Instantaneous utility function equation
         UTIL             Objective function;
-
 ** Equations of the model
 * Emissions and Damages
  eeq(t)..             E(t)           =E= EIND(t) + etree(t);
@@ -353,7 +345,6 @@ EQUATIONS
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
  mcabateeq(t)..       MCABATE(t)     =E= pbacktime(t) * MIU(t)**(expcost2-1);
  carbpriceeq(t)..     CPRICE(t)      =E= pbacktime(t) * (MIU(t))**(expcost2-1);
-
 * Climate and carbon cycle
  atfraceq(t)..        atfrac(t)      =E= ((co2(t)-co2_1750)/(ccatot(t)+0.0000001));
  iirfeq(t)..          IIRF(t)        =E= r0 + ru * (1-atfrac(t)) * ccatot(t)*3.664 + rt * T1(t) + ra * atfrac(t) * ccatot(t)*3.664;
@@ -377,16 +368,13 @@ EQUATIONS
  seq(t)..             I(t)           =E= S(t) * Y(t);
  kk(t+1)..            K(t+1)         =L= (1-dk)**tstep * K(t) + tstep * I(t);
  rieq(t+1)..          RI(t)          =E= (1+prstp) * (CPC(t+1)/CPC(t))**(elasmu/tstep) - 1;
-
 * Utility
  cemutotpereq(t)..    CEMUTOTPER(t)  =E= PERIODU(t) * L(t)*1000 * rr(t);
  periodueq(t)..       PERIODU(t)     =E= ((C(T)/L(T))**(1-elasmu)-1)/(1-elasmu)-1;
  util..               UTILITY        =E= tstep * scale1 * sum(t,  CEMUTOTPER(t)) + scale2 ;
-
 * Resource limit
 CCA.up(t)             = fosslim;
 CCA.lo(t)             = 0;
-
 * Control rate limits
 MIU.up(t)             = limmiu;
 MIU.up(t)$(t.val<8)   = 1;
@@ -409,12 +397,10 @@ IIRF.UP(t)      = 97;
 IIRF.LO(t)      = 16;
 alpha.lo(t)     = 0.01;
 alpha.up(t)     = 100;
-
 * Control variables
 set lag10(t) ;
 lag10(t) =  yes$(t.val gt card(t)-10);
 S.FX(lag10(t)) = optlrsav;
-
 * Initial conditions
 CCA.FX(tfirst)    = 470.55;
 K.FX(tfirst)      = k0;
@@ -426,11 +412,11 @@ IIRF.l(tfirst)    = 50;
 atfrac.l(tfirst)  = 0.526;
 alpha.l(tfirst)   = 0.81;
 *these three lines above need a check
+ETREE.l(tfirst)   = 4;
 cbox1.fx(tfirst)  = icbox1;
 cbox2.fx(tfirst)  = icbox2;
 cbox3.fx(tfirst)  = icbox3;
 cbox4.fx(tfirst)  = icbox4;
-
 ** Solution options
 option iterlim = 99999;
 option reslim  = 99999;
@@ -449,7 +435,6 @@ If (ifopt eq 0,
        a2 = a20;
       cprice.up(t)$(t.val<tnopol+1) = max(photel(t),cpricebase(t));
 );
-
 miu.fx('1')$(ifopt=1) = miu0;
 solve DICE maximizing utility using nlp;
 solve DICE maximizing utility using nlp;
@@ -527,7 +512,7 @@ Loop (T, put periodu.l(t));
 put / "Consumption" ;
 Loop (T, put C.l(t));
 put / "Land emissions" ;
-Loop (T, put etree(t));
+Loop (T, put etree.l(t));
 put / "Cumulative ind emissions" ;
 Loop (T, put cca.l(t));
 put / "Cumulative total emissions" ;
