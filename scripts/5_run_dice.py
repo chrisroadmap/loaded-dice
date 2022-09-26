@@ -90,8 +90,9 @@ PARAMETERS
         g0       Carbon cycle parameter (Leach et al. 2021)
         g1       Carbon cycle parameter (Leach et al. 2021)
         r0       Pre-industrial time-integrated airborne fraction      /{cc[0]}/
-        rc       Sensitivity of airborne fraction with cumulative CO2  /{cc[1]}/
+        rc       Sensitivity of airborne fraction with CO2 uptake      /{cc[1]}/
         rt       Sensitivity of airborne fraction with temperature     /{cc[2]}/
+        ra       Sensitivity of airborne fraction with CO2 airborne    /{cc[3]}/
         tau(box) Lifetimes of the four atmospheric carbon boxes
                      / 1 1e9, 2 394.4, 3 36.54, 4 4.304 /
         a(box)   Partition fraction of the four atmospheric carbon boxes
@@ -122,14 +123,20 @@ PARAMETERS
                   96 {foth[95]}, 97 {foth[96]}, 98 {foth[97]}, 99 {foth[98]}, 100 {foth[99]}/
         iirf_horizon Time horizon for IIRF in yr                       /100/
         tocean0  two-layer "deep ocean" temperature change             /{t2*0.85/0.881}/
-        tatm0    two-layer "surface" temperature change                /{t1}/
-        fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /{cr[6]}/
+        T1_init    two-layer "surface" temperature change              /{t1}/
         EBM_A11  Fast component of mixed layer temperature             /{cr[0]}/
-        EBM_A12  Slow component of mixed layer temperature             /{cr[1]}/
-        EBM_A21  Fast component of deep ocean temperature              /{cr[2]}/
-        EBM_A22  Slow component of deep ocean temperature              /{cr[3]}/
-        EBM_B1   Forcing contribution to mixed layer                   /{cr[4]}/
-        EBM_B2   Forcing component to ocean layer                      /{cr[5]}/
+        EBM_A12  Intermediate component of mixed layer temperature     /{cr[1]}/
+        EBM_A13  Slow component of mixed layer temperature             /{cr[2]}/
+        EBM_A21  Fast component of mid ocean temperature               /{cr[3]}/
+        EBM_A22  Intermediate component of mid ocean temperature       /{cr[4]}/
+        EBM_A23  Slow component of mid ocean temperature               /{cr[5]}/
+        EBM_A31  Fast component of deep ocean temperature              /{cr[6]}/
+        EBM_A32  Intermediate component of deep ocean temperature      /{cr[7]}/
+        EBM_A33  Slow component of deep ocean temperature              /{cr[8]}/
+        EBM_B1   Forcing contribution to mixed layer                   /{cr[9]}/
+        EBM_B2   Forcing component to ocean layer                      /{cr[10]}/
+        EBM_B3   Forcing component to ocean layer                      /{cr[11]}/
+        fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /{cr[12]}/
 ** Climate damage parameters
         a10      Initial damage intercept                              /0/
         a20      Initial damage quadratic term
@@ -214,7 +221,7 @@ PARAMETERS
 VARIABLES
         MIU(t)          Emission control rate GHGs
         FORC(t)         Increase in radiative forcing (watts per m2 from 1900)
-        TATM(t)         Increase temperature of atmosphere (degrees C from 1900)
+        T1(t)         Increase temperature of atmosphere (degrees C from 1900)
         TOCEAN(t)       Increase temperatureof lower oceans (degrees C from 1900)
         MAT(t)          Carbon concentration increase in atmosphere (GtC from 1750)
         MU(t)           Carbon concentration increase in shallow oceans (GtC from 1750)
@@ -248,7 +255,7 @@ VARIABLES
         iirf(t)         time-integrated impulse response
         atfrac(t)       Atmospheric share since 1850;
 
-NONNEGATIVE VARIABLES  MIU, TATM, MAT, MU, ML, Y, YGROSS, C, K, I, alpha;
+NONNEGATIVE VARIABLES  MIU, T1, MAT, MU, ML, Y, YGROSS, C, K, I, alpha;
 
 EQUATIONS
 *Emissions and Damages
@@ -266,7 +273,7 @@ EQUATIONS
 *Climate and carbon cycle
         MMAT(t)          Atmospheric concentration equation
         ATFRACEQ(t)      Atmospheric airborne fraction equation
-        TATMEQ(t)        Temperature-climate equation for atmosphere
+        T1EQ(t)          Temperature-climate equation for atmosphere
         TOCEANEQ(t)      Temperature-climate equation for lower oceans
         ALPHAEQ(t)       Scale factor equation
         IIRFEQ(t)        IIRF equation
@@ -298,7 +305,7 @@ EQUATIONS
  ccacca(t+1)..        CCA(t+1)       =E= CCA(t)+ EIND(t)*tstep/3.664;
  ccatoteq(t)..        CCATOT(t)      =E= CCA(t)+cumetree(t);
  force(t)..           FORC(t)        =E= fco22x * ((log((MAT(t)/mateq))/log(2))) + forcoth(t);
- damfraceq(t) ..      DAMFRAC(t)     =E= (a1*TATM(t))+(a2*TATM(t)**a3) ;
+ damfraceq(t) ..      DAMFRAC(t)     =E= (a1*T1(t))+(a2*T1(t)**a3) ;
  dameq(t)..           DAMAGES(t)     =E= YGROSS(t) * DAMFRAC(t);
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
  mcabateeq(t)..       MCABATE(t)     =E= pbacktime(t) * MIU(t)**(expcost2-1);
@@ -306,16 +313,16 @@ EQUATIONS
 
 * Climate and carbon cycle
  atfraceq(t)..        atfrac(t)      =E= ((mat(t)-mateq)/(ccatot(t)+0.0000001));
- iirfeq(t)..          IIRF(t)        =E= r0 + rc * (1-atfrac(t)) * ccatot(t) + rt * tatm(t);
+ iirfeq(t)..          IIRF(t)        =E= r0 + rc * (1-atfrac(t)) * ccatot(t) + rt * T1(t);
  alphaeq(t)..         ALPHA(t)       =E= g0 * exp(iirf(t)/g1);
  cbox1eq(t+1)..       CBOX1(t+1)     =E= a("1")*E(t)*tstep/3.664 + cbox1(t) * exp(-tstep/(alpha(t)*tau("1")));
  cbox2eq(t+1)..       CBOX2(t+1)     =E= a("2")*E(t)*tstep/3.664 + cbox2(t) * exp(-tstep/(alpha(t)*tau("2")));
  cbox3eq(t+1)..       CBOX3(t+1)     =E= a("3")*E(t)*tstep/3.664 + cbox3(t) * exp(-tstep/(alpha(t)*tau("3")));
  cbox4eq(t+1)..       CBOX4(t+1)     =E= a("4")*E(t)*tstep/3.664 + cbox4(t) * exp(-tstep/(alpha(t)*tau("4")));
- tatmeq(t+1)..        TATM(t+1)      =E= EBM_A11 * TATM(t) + EBM_A12 * TOCEAN(t) + EBM_B1 * FORC(t);
- toceaneq(t+1)..      TOCEAN(t+1)    =E= EBM_A21 * TATM(t) + EBM_A22 * TOCEAN(t) + EBM_B2 * FORC(t);
+ T1eq(t+1)..        T1(t+1)      =E= EBM_A11 * T1(t) + EBM_A12 * TOCEAN(t) + EBM_B1 * FORC(t);
+ toceaneq(t+1)..      TOCEAN(t+1)    =E= EBM_A21 * T1(t) + EBM_A22 * TOCEAN(t) + EBM_B2 * FORC(t);
  mmat(t)..            MAT(t)         =E= mateq + cbox1(t) + cbox2(t) + cbox3(t) + cbox4(t);
-* constrainT(t)..      TATM(t)        =L= 2;
+* constrainT(t)..      T1(t)        =L= 2;
 
 * Economic variables
  ygrosseq(t)..        YGROSS(t)      =E= (al(t)*(L(t)/1000)**(1-GAMA))*(K(t)**GAMA);
@@ -349,9 +356,9 @@ ML.LO(t)        = 1000;
 C.LO(t)         = 2;
 TOCEAN.UP(t)    = 20;
 TOCEAN.LO(t)    = -1;
-TATM.UP(t)      = 20;
+T1.UP(t)      = 20;
 CPC.LO(t)       = .01;
-TATM.UP(t)      = 12;
+T1.UP(t)      = 12;
 IIRF.UP(t)      = 97;
 IIRF.LO(t)      = 16;
 alpha.lo(t)     = 0.01;
@@ -366,7 +373,7 @@ S.FX(lag10(t)) = optlrsav;
 CCA.FX(tfirst)    = 420.4902535;
 K.FX(tfirst)      = k0;
 MAT.FX(tfirst)     = mat0;
-TATM.FX(tfirst)   = tatm0;
+T1.FX(tfirst)   = T1_init;
 TOCEAN.FX(tfirst) = tocean0;
 IIRF.l(tfirst)    = 50;
 atfrac.l(tfirst)  = 0.526;
@@ -422,7 +429,7 @@ Loop (T, put EIND.l(T));
 put / "Atmospheric concentrations ppm" ;
 Loop (T, put ppm(t));
 put / "Atmospheric Temperature rel. 1850-1900" ;
-Loop (T, put TATM.l(T));
+Loop (T, put T1.l(T));
 put / "Ocean Temperature rel. 1850-1900" ;
 Loop (T, put TOCEAN.l(T));
 put / "Output Net Net) " ;

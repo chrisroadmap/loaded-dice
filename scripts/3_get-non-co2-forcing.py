@@ -1,155 +1,186 @@
-# script to grab non-CO2 forcing from AR6-WG3 runs. We only want anthro.
-
-import json
 import os
 
-import fair
 import numpy as np
 import pandas as pd
-from scipy.interpolate import interp1d
-import scipy.linalg
+import matplotlib.pyplot as pl
 from tqdm import tqdm
+from scipy.interpolate import interp1d
+
+from fair import FAIR
+from fair.io import read_properties
+from fair.interface import fill, initialise
+from fair.forcing.ghg import meinshausen2020
 
 here = os.path.dirname(os.path.realpath(__file__))
+os.makedirs(os.path.join(here, '..', 'data_output'), exist_ok=True)
 
-# get ssp245
-ssp_df = pd.read_csv(os.path.join(here, '..', 'data_input', 'rcmip', 'rcmip-emissions-annual-means-v5-1-0.csv'))
-years = np.arange(1750, 2501)
 
-startyear = 1750
-first_scenyear = 2015
-last_scenyear = 2500
-first_row = int(first_scenyear-startyear)
-last_row = int(last_scenyear-startyear)
+erf_2co2 = meinshausen2020(
+    np.array([554.30, 731.41, 273.87]) * np.ones((1, 1, 1, 3)),
+    np.array([277.15, 731.41, 273.87]) * np.ones((1, 1, 1, 3)),
+    np.array((1.05, 0.86, 1.07)) * np.ones((1, 1, 1, 1)),
+    np.ones((1, 1, 1, 3)),
+    np.array([True, False, False]),
+    np.array([False, True, False]),
+    np.array([False, False, True]),
+    np.array([False, False, False])
+).squeeze()[0]
 
-species = [
-    '|CO2|MAGICC Fossil and Industrial',
-    '|CO2|MAGICC AFOLU',
-    '|CH4',
-    '|N2O',
-    '|Sulfur',
-    '|CO',
-    '|VOC',
-    '|NOx',
-    '|BC',
-    '|OC',
-    '|NH3',
-    '|CF4',
-    '|C2F6',
-    '|C6F14',
-    '|HFC23',
-    '|HFC32',
-    '|HFC4310mee',
-    '|HFC125',
-    '|HFC134a',
-    '|HFC143a',
-    '|HFC227ea',
-    '|HFC245fa',
-    '|SF6',
-    '|CFC11',
-    '|CFC12',
-    '|CFC113',
-    '|CFC114',
-    '|CFC115',
-    '|CCl4',
-    '|CH3CCl3',
-    '|HCFC22',
-    '|HCFC141b',
-    '|HCFC142b',
-    '|Halon1211',
-    '|Halon1202',
-    '|Halon1301',
-    '|Halon2402',
-    '|CH3Br',
-    '|CH3Cl',
-]
+scenarios = ['ssp119', 'ssp126', 'ssp245', 'ssp370']
 
-unit_convert = np.ones(40)
-unit_convert[1] = 12/44/1000
-unit_convert[2] = 12/44/1000
-unit_convert[4] = 28/44/1000
-unit_convert[5] = 32/64
-unit_convert[8] = 14/46
+# Solar and volcanic forcing
+df_natural = pd.read_csv(os.path.join(here, '..', 'data_input', 'wg1', 'natural_erf.csv'), index_col=0)
+solar_forcing = df_natural['solar'].loc[1750.5:2502.5].values
+volcanic_forcing = df_natural['volcanic'].loc[1750.5:2502.5].values
 
-emissions_out = np.ones((751, 40)) * np.nan
-emissions_out[:,0] = years
+solar_5yr = np.zeros(151)
+volcanic_5yr = np.zeros(151)
+solar_5yr[0] = solar_forcing[:3].mean()
+volcanic_5yr[0] = volcanic_forcing[:3].mean()
+for period in range(1, 151):
+    solar_5yr[period] = solar_forcing[(5*period-2):(5*period+3)].mean()
+    volcanic_5yr[period] = volcanic_forcing[(5*period-2):(5*period+3)].mean()
 
-years_future = [2015] + list(range(2020, 2501, 10))
-for i, specie in enumerate(species):
-    emissions_out[:first_row,i+1] = ssp_df.loc[
-        (ssp_df['Model']=='MESSAGE-GLOBIOM')&
-        (ssp_df['Region']=='World')&
-        (ssp_df['Scenario']=='ssp245')&
-        (ssp_df['Variable'].str.endswith(specie)),str(startyear):'2014']*unit_convert[i+1]
-    f = interp1d(years_future, ssp_df.loc[
-        (ssp_df['Model']=='MESSAGE-GLOBIOM')&
-        (ssp_df['Region']=='World')&
-        (ssp_df['Scenario']=='ssp245')&
-        (ssp_df['Variable'].str.endswith(specie)), '2015':'2500'].dropna(axis=1))
-    emissions_out[first_row:(last_row+1), i+1] = f(
-        np.arange(first_scenyear, last_scenyear+1)
-    )*unit_convert[i+1]
+# future solar forcing amplitude to be zero from 2020
+solar_5yr[54:] = 0
 
-# grab configs
-with open(os.path.join(here, '..', 'data_input', 'fair-1.6.2', 'fair-1.6.2-wg3-params.json')) as f:
-    config_list = json.load(f)
+species, properties = read_properties()
+df_configs =pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
+configs = np.array(list(df_configs.index))
+print(configs)
 
-# run fair in AR6 model
-def run_fair(args):
-    c, f, t, _, _, _, _ = fair.forward.fair_scm(**args)
-    return (
-        np.sum(f[:, 1:43], axis=1),
-        t[260:271].mean()-t[100:151].mean(),
-        t[245:265].mean()-t[100:151].mean()
+trend_shape = np.ones(151)
+trend_shape[:55] = np.linspace(0, 1, 55)
+
+f = FAIR(ch4_method='Thornhill2021')
+f.define_time(1750, 2500, 5)
+f.define_scenarios(scenarios)
+f.define_configs(configs)
+f.define_species(species, properties)
+f.allocate()
+
+f.fill_from_rcmip()
+
+
+calibrated_f4co2_mean = df_configs['F_4xCO2'].mean()
+
+fill(f.forcing, volcanic_5yr[:, None, None] * df_configs.loc[configs, 'scale Volcanic'].values.squeeze(), specie='Volcanic')
+fill(f.forcing,
+     solar_5yr[:, None, None] *
+     df_configs.loc[configs, 'solar_amplitude'].values.squeeze() +
+     trend_shape[:, None, None] * df_configs.loc[configs, 'solar_trend'].values.squeeze(),
+     specie='Solar'
+)
+
+# climate response
+fill(f.climate_configs['ocean_heat_capacity'], df_configs.loc[configs, 'c1':'c3'].values)
+fill(f.climate_configs['ocean_heat_transfer'], df_configs.loc[configs, 'kappa1':'kappa3'].values)
+fill(f.climate_configs['deep_ocean_efficacy'], df_configs.loc[configs, 'epsilon'].values.squeeze())
+fill(f.climate_configs['gamma_autocorrelation'], df_configs.loc[configs, 'gamma'].values.squeeze())
+fill(f.climate_configs['sigma_eta'], df_configs.loc[configs, 'sigma_eta'].values.squeeze())
+fill(f.climate_configs['sigma_xi'], df_configs.loc[configs, 'sigma_xi'].values.squeeze())
+fill(f.climate_configs['stochastic_run'], False)
+fill(f.climate_configs['use_seed'], False)
+fill(f.climate_configs['forcing_4co2'], 2 * erf_2co2 * (1 + 0.561*(calibrated_f4co2_mean - df_configs.loc[configs,'F_4xCO2'])/calibrated_f4co2_mean))
+
+# species level
+f.fill_species_configs()
+
+# carbon cycle
+fill(f.species_configs['iirf_0'], df_configs.loc[configs, 'r0'].values.squeeze(), specie='CO2')
+fill(f.species_configs['iirf_airborne'], df_configs.loc[configs, 'rA'].values.squeeze(), specie='CO2')
+fill(f.species_configs['iirf_uptake'], df_configs.loc[configs, 'rU'].values.squeeze(), specie='CO2')
+fill(f.species_configs['iirf_temperature'], df_configs.loc[configs, 'rT'].values.squeeze(), specie='CO2')
+
+# aerosol indirect
+fill(f.species_configs['aci_scale'], df_configs.loc[configs, 'beta'].values.squeeze())
+fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape_so2'].values.squeeze(), specie='Sulfur')
+fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape_bc'].values.squeeze(), specie='BC')
+fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape_oc'].values.squeeze(), specie='OC')
+
+# methane lifetime baseline
+fill(f.species_configs['unperturbed_lifetime'], 10.4198121, specie='CH4')
+
+# emissions adjustments for N2O and CH4 (we don't want to make these defaults as people might wanna run pulse expts with these gases)
+fill(f.species_configs['baseline_emissions'], 19.019783117809567, specie='CH4')
+fill(f.species_configs['baseline_emissions'], 0.08602230754, specie='N2O')
+
+# aerosol direct
+for specie in ['BC', 'CH4', 'N2O', 'NH3', 'NOx', 'OC', 'Sulfur', 'VOC', 'Equivalent effective stratospheric chlorine']:
+    fill(f.species_configs['erfari_radiative_efficiency'], df_configs.loc[configs, f"ari {specie}"], specie=specie)
+
+# forcing
+for specie in ['CH4', 'N2O', 'Stratospheric water vapour', 'Contrails', 'Light absorbing particles on snow and ice', 'Land use']:
+    fill(f.species_configs['forcing_scale'], df_configs.loc[configs, f"scale {specie}"].values.squeeze(), specie=specie)
+for specie in ['CFC-11', 'CFC-12', 'CFC-113', 'CFC-114', 'CFC-115', 'HCFC-22', 'HCFC-141b', 'HCFC-142b',
+    'CCl4', 'CHCl3', 'CH2Cl2', 'CH3Cl', 'CH3CCl3', 'CH3Br', 'Halon-1211', 'Halon-1301', 'Halon-2402',
+    'CF4', 'C2F6', 'C3F8', 'c-C4F8', 'C4F10', 'C5F12', 'C6F14', 'C7F16', 'C8F18', 'NF3', 'SF6', 'SO2F2',
+    'HFC-125', 'HFC-134a', 'HFC-143a', 'HFC-152a', 'HFC-227ea', 'HFC-23', 'HFC-236fa', 'HFC-245fa', 'HFC-32',
+    'HFC-365mfc', 'HFC-4310mee']:
+    fill(f.species_configs['forcing_scale'], df_configs.loc[configs, 'scale minorGHG'].values.squeeze(), specie=specie)
+fill(f.species_configs['forcing_scale'], 1 + 0.561*(calibrated_f4co2_mean - df_configs.loc[configs,'F_4xCO2'].values)/calibrated_f4co2_mean, specie='CO2')
+
+# ozone
+for specie in ['CH4', 'N2O', 'CO', 'NOx', 'VOC', 'Equivalent effective stratospheric chlorine']:
+    fill(f.species_configs['ozone_radiative_efficiency'], df_configs.loc[configs, f"o3 {specie}"], specie=specie)
+
+# tune down volcanic efficacy
+fill(f.species_configs['forcing_efficacy'], 0.6, specie='Volcanic')
+
+
+# initial condition of CO2 concentration (but not baseline for forcing calculations)
+fill(f.species_configs['baseline_concentration'], df_configs.loc[configs, 'co2_concentration_1750'].values.squeeze(), specie='CO2')
+
+# initial conditions
+initialise(f.concentration, f.species_configs['baseline_concentration'])
+initialise(f.forcing, 0)
+initialise(f.temperature, 0)
+initialise(f.cumulative_emissions, 0)
+initialise(f.airborne_emissions, 0)
+
+f.run()
+
+fig, ax = pl.subplots(1, 4, figsize=(16, 5))
+
+for i in range(4):
+    ax[i].fill_between(
+        f.timebounds,
+        np.min(f.temperature[:, i, :, 0]-f.temperature[20:30, i, :, 0].mean(axis=0), axis=1),
+        np.max(f.temperature[:, i, :, 0]-f.temperature[20:30, i, :, 0].mean(axis=0), axis=1),
+        color='#000000',
+        alpha=0.2,
     )
+    ax[i].fill_between(
+        f.timebounds,
+        np.percentile(f.temperature[:, i, :, 0]-f.temperature[20:30, i, :, 0].mean(axis=0), 5, axis=1),
+        np.percentile(f.temperature[:, i, :, 0]-f.temperature[20:30, i, :, 0].mean(axis=0), 95, axis=1),
+        color='#000000',
+        alpha=0.2,
+    )
+    ax[i].fill_between(
+        f.timebounds,
+        np.percentile(f.temperature[:, i, :, 0]-f.temperature[20:30, i, :, 0].mean(axis=0), 16, axis=1),
+        np.percentile(f.temperature[:, i, :, 0]-f.temperature[20:30, i, :, 0].mean(axis=0), 84, axis=1),
+        color='#000000',
+        alpha=0.2,
+    )
+    ax[i].plot(
+        f.timebounds,
+        np.median(f.temperature[:, i, :, 0]-f.temperature[20:30, i, :, 0].mean(axis=0), axis=1),
+        color='#000000',
+    )
+    ax[i].set_xlim(1750,2500)
+    ax[i].set_ylim(-1, 10)
+    ax[i].axhline(0, color='k', ls=":", lw=0.5)
+    ax[i].axhline(1.5, color='k', ls=":", lw=0.5)
+    ax[i].axhline(2, color='k', ls=":", lw=0.5)
+    ax[i].set_title(scenarios[i])
+pl.suptitle('Temperature anomaly')
+pl.show()
 
-def fair_process(emissions):
-    updated_config = []
-    for i, cfg in enumerate(config_list):
-        updated_config.append({})
-        for key, value in cfg.items():
-            if isinstance(value, list):
-                updated_config[i][key] = np.asarray(value)
-            else:
-                updated_config[i][key] = value
-        solar = np.zeros(751)
-        volcanic = np.zeros(751)
-        natural = np.zeros((751, 2))
-        updated_config[i]['emissions'] = emissions
-        updated_config[i]['diagnostics'] = 'AR6'
-        updated_config[i]["efficacy"] = np.ones(45)
-        updated_config[i]["gir_carbon_cycle"] = True
-        updated_config[i]["temperature_function"] = "Geoffroy"
-        updated_config[i]["aerosol_forcing"] = "aerocom+ghan2"
-        updated_config[i]["fixPre1850RCP"] = False
-        solar[:361] = updated_config[i]["F_solar"]
-        updated_config[i]['F_solar'] = solar
-        volcanic[:361] = updated_config[i]["F_volcanic"]
-        updated_config[i]['F_volcanic'] = volcanic
-        natural[:361, :] = updated_config[i]['natural']
-        natural[361:, :] = natural[360, :]
-        updated_config[i]['natural'] = natural
+for i, scenario in enumerate(scenarios):
+    df = pd.DataFrame((np.nansum(f.forcing[54:, i, :, :], axis=-1) - f.forcing[54:, i, :, 2] - f.forcing[54:, i, :, 54:56].mean(axis=-1)), index=range(2020, 2505, 5), columns=configs).T
+    df.to_csv(os.path.join(here, '..', 'data_output', f'anthropogenic-non-co2-forcing_{scenario}.csv'))
 
-    f = np.ones((100, len(updated_config))) * np.nan
-    t2015 = np.ones(len(updated_config)) * np.nan
-    t2005 = np.ones(len(updated_config)) * np.nan
-
-    for i, cfg in tqdm(enumerate(updated_config), total=len(updated_config), position=0, leave=True):
-        f_this, t2015[i], t2005[i] = run_fair(updated_config[i])
-        for ij, j in enumerate(range(263, 751, 5)):
-            f[ij, i] = np.mean(f_this[j:j+5])
-            f[98:, i] = f[97, i]
-
-    return (f, t2015, t2005)
-
-f, t2015, t2005 = fair_process(emissions_out)
-
-df = pd.DataFrame(f, index=range(2015, 2515, 5))
-df.to_csv(os.path.join(here, '..', 'data_output', 'anthropogenic-non-co2-forcing.csv'))
-
-# rescale the warming to IPCC assessment of 0.85. We want to retain the
-# uncertainty structure however, so we will subtract a constant offset.
-t2005_mean = np.nanmean(t2005)
-
-df = pd.DataFrame(t2015 - (t2005_mean - 0.85), columns=['surface_warming_2015'])
-df.to_csv(os.path.join(here, '..', 'data_output', 'temperature.csv'))
+    df = pd.DataFrame(f.temperature[54, i, :, :]-f.temperature[20:30, i, :, :].mean(axis=0), index=configs, columns=['mixed_layer', 'mid_ocean', 'deep_ocean'])
+    df.to_csv(os.path.join(here, '..', 'data_output', f'temperature_{scenario}.csv'))
