@@ -4,8 +4,10 @@ import subprocess
 
 from tqdm import tqdm
 import pandas as pd
-from climateforcing.utils import mkdir_p
-import fair
+
+# should really import these constants from FaIR
+carbon_convert = 5.1352 * 12.011 / 28.97
+
 
 class InfeasibleSolutionError(Exception):
     def __init__(self, run):
@@ -13,28 +15,33 @@ class InfeasibleSolutionError(Exception):
 
 here = os.path.dirname(os.path.realpath(__file__))
 
-with open(os.path.join(here, '..', 'data_input', 'fair-1.6.2', 'fair-1.6.2-wg3-params.json')) as f:
-    config_list = json.load(f)
-ensemble_size=len(config_list)
+df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
+configs = df_configs.index
 
-mkdir_p(os.path.join(here, 'gams_scripts'))
-mkdir_p(os.path.join(here, '..', 'data_output', 'dice'))
+os.makedirs(os.path.join(here, 'gams_scripts'), exist_ok=True)
+os.makedirs(os.path.join(here, '..', 'data_output', 'dice'), exist_ok=True)
 
-# TODO: rename output CSVs and different index column
-df_t2 = pd.read_csv(os.path.join(here, '..', 'data_input', 'wg1', 'temperature_ocean_2015.csv'))
-df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'anthropogenic-non-co2-forcing.csv'), index_col=0)
-df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'carbon-boxes.csv'), index_col=0)
-df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_response_params.csv'), index_col=0)
-df_cc = pd.read_csv(os.path.join(here, '..', 'data_output', 'cc-feedbacks.csv'), index_col=0)
-df_t1 = pd.read_csv(os.path.join(here, '..', 'data_output', 'temperature.csv'), index_col=0)
+df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_ssp245.csv'), index_col=0)
+df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'gas_partitions_ssp245.csv'), index_col=0)
+df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'climate_response_params.csv'), index_col=0)
+df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp245.csv'), index_col=0)
 
-for run in tqdm(range(ensemble_size)):
-    t2 = df_t2.loc[run].values[0]
-    foth = df_nonco2.iloc[:,run].values
-    cbox = df_cbox.loc[run].values
-    cr = df_cr.loc[run].values
-    cc = df_cc.loc[run].values
-    t1 = df_t1.loc[run].values[0]
+for run, config in tqdm(enumerate(configs[:1])):
+    t1 = df_temp.loc[config, 'mixed_layer']
+    t2 = df_temp.loc[config, 'mid_ocean']
+    t3 = df_temp.loc[config, 'deep_ocean']
+    nonco2 = df_nonco2.loc[config, :].values
+    cr = df_cr.loc[config].values
+    r0 = df_configs.loc[config, 'r0']
+    ru = df_configs.loc[config, 'rU']
+    rt = df_configs.loc[config, 'rT']
+    ra = df_configs.loc[config, 'rA']
+    cbox1 = df_cbox.loc[config, 'geological']
+    cbox2 = df_cbox.loc[config, 'slow']
+    cbox3 = df_cbox.loc[config, 'mid']
+    cbox4 = df_cbox.loc[config, 'fast']
+    co2_2020 = df_cbox.loc[config, 'co2_2020']
+    co2_1750 = df_configs.loc[config, 'co2_concentration_1750']
 
     template = f'''
 $ontext
@@ -64,7 +71,7 @@ PARAMETERS
         prstp    Initial rate of social time preference per year       /0.015/
 ** Population and technology
         gama     Capital elasticity in production function             /0.300/
-        pop0     Initial world population 2015 (millions)              /7403/
+        pop0     Initial world population 2015 (millions)              /7841/
         popadj   Growth rate to calibrate to 2050 pop projection       /0.134/
         popasym  Asymptotic population (millions)                      /11500/
         dk       Depreciation rate on capital (per year)               /0.100/
@@ -76,54 +83,56 @@ PARAMETERS
 ** Emissions parameters
         gsigma1  Initial growth of sigma (per year)                    /-0.0152/
         dsig     Decline rate of decarbonization (per period)          /-0.001/
-        eland0   Carbon emissions from land 2015 (GtCO2 per year)      /4.14/
-* Global Carbon Project 2021, average of 2010-2020 LUC emissions
+        eland0   Carbon emissions from land 2020 (GtCO2 per year)      /3.26/
+* projections from RCMIP (should use GCP; TODO)
         deland   Decline rate of land emissions (per period)           /0.115/
-        e0       Industrial emissions 2015 (GtCO2 per year)            /35.85/
+        e0       Industrial emissions 2020 (GtCO2 per year)            /37.39/
+* projections from RCMIP (should use GCP; TODO)
         miu0     Initial emissions control rate for base case 2015     /0.03/
 * Initial Conditions
-        mat0     Initial Concentration in atmosphere 2015 (GtC)        /{cc[3]*fair.constants.general.ppm_gtc+cbox.sum()}/
-        mateq    Equilibrium concentration atmosphere  (GtC)           /{cc[3]*fair.constants.general.ppm_gtc}/
+        co2_2020 Initial concentration in atmosphere 2020 (GtC)        /{co2_2020*carbon_convert}/
+        co2_1750 Pre-industrial concentration atmosphere  (GtC)        /{co2_1750*carbon_convert}/
 * These are for declaration and are defined later
         sig0     Carbon intensity 2010 (kgCO2 per output 2005 USD 2010)
 ** Climate model parameters
         g0       Carbon cycle parameter (Leach et al. 2021)
         g1       Carbon cycle parameter (Leach et al. 2021)
-        r0       Pre-industrial time-integrated airborne fraction      /{cc[0]}/
-        rc       Sensitivity of airborne fraction with CO2 uptake      /{cc[1]}/
-        rt       Sensitivity of airborne fraction with temperature     /{cc[2]}/
-        ra       Sensitivity of airborne fraction with CO2 airborne    /{cc[3]}/
+        r0       Pre-industrial time-integrated airborne fraction      /{r0}/
+        ru       Sensitivity of airborne fraction with CO2 uptake      /{ru}/
+        rt       Sensitivity of airborne fraction with temperature     /{rt}/
+        ra       Sensitivity of airborne fraction with CO2 airborne    /{ra}/
         tau(box) Lifetimes of the four atmospheric carbon boxes
                      / 1 1e9, 2 394.4, 3 36.54, 4 4.304 /
         a(box)   Partition fraction of the four atmospheric carbon boxes
                      / 1 0.2173, 2 0.2240, 3 0.2824, 4 0.2763 /
-        ICBOX1   Initial GtC concentration of carbon box 1 in 2015     /{cbox[0]}/
-        ICBOX2   Initial GtC concentration of carbon box 2 in 2015     /{cbox[1]}/
-        ICBOX3   Initial GtC concentration of carbon box 3 in 2015     /{cbox[2]}/
-        ICBOX4   Initial GtC concentration of carbon box 4 in 2015     /{cbox[3]}/
-        forcoth(t) /1 {foth[0]}, 2 {foth[1]}, 3 {foth[2]}, 4 {foth[3]}, 5 {foth[4]},
-                  6 {foth[5]}, 7 {foth[6]}, 8 {foth[7]}, 9 {foth[8]}, 10 {foth[9]},
-                  11 {foth[10]}, 12 {foth[11]}, 13 {foth[12]}, 14 {foth[13]}, 15 {foth[14]},
-                  16 {foth[15]}, 17 {foth[16]}, 18 {foth[17]}, 19 {foth[18]}, 20 {foth[19]},
-                  21 {foth[20]}, 22 {foth[21]}, 23 {foth[22]}, 24 {foth[23]}, 25 {foth[24]},
-                  26 {foth[25]}, 27 {foth[26]}, 28 {foth[27]}, 29 {foth[28]}, 30 {foth[29]},
-                  31 {foth[30]}, 32 {foth[31]}, 33 {foth[32]}, 34 {foth[33]}, 35 {foth[34]},
-                  36 {foth[35]}, 37 {foth[36]}, 38 {foth[37]}, 39 {foth[38]}, 40 {foth[39]},
-                  41 {foth[40]}, 42 {foth[41]}, 43 {foth[42]}, 44 {foth[43]}, 45 {foth[44]},
-                  46 {foth[45]}, 47 {foth[46]}, 48 {foth[47]}, 49 {foth[48]}, 50 {foth[49]},
-                  51 {foth[50]}, 52 {foth[51]}, 53 {foth[52]}, 54 {foth[53]}, 55 {foth[54]},
-                  56 {foth[55]}, 57 {foth[56]}, 58 {foth[57]}, 59 {foth[58]}, 60 {foth[59]},
-                  61 {foth[60]}, 62 {foth[61]}, 63 {foth[62]}, 64 {foth[63]}, 65 {foth[64]},
-                  66 {foth[65]}, 67 {foth[66]}, 68 {foth[67]}, 69 {foth[68]}, 70 {foth[69]},
-                  71 {foth[70]}, 72 {foth[71]}, 73 {foth[72]}, 74 {foth[73]}, 75 {foth[74]},
-                  76 {foth[75]}, 77 {foth[76]}, 78 {foth[77]}, 79 {foth[78]}, 80 {foth[79]},
-                  81 {foth[80]}, 82 {foth[81]}, 83 {foth[82]}, 84 {foth[83]}, 85 {foth[84]},
-                  86 {foth[85]}, 87 {foth[86]}, 88 {foth[87]}, 89 {foth[88]}, 90 {foth[89]},
-                  91 {foth[90]}, 92 {foth[91]}, 93 {foth[92]}, 94 {foth[93]}, 95 {foth[94]},
-                  96 {foth[95]}, 97 {foth[96]}, 98 {foth[97]}, 99 {foth[98]}, 100 {foth[99]}/
+        ICBOX1   Initial GtC concentration of carbon box 1 in 2020     /{cbox1}/
+        ICBOX2   Initial GtC concentration of carbon box 2 in 2020     /{cbox2}/
+        ICBOX3   Initial GtC concentration of carbon box 3 in 2020     /{cbox3}/
+        ICBOX4   Initial GtC concentration of carbon box 4 in 2020     /{cbox4}/
+        forcoth(t) /1 {nonco2[0]}, 2 {nonco2[1]}, 3 {nonco2[2]}, 4 {nonco2[3]}, 5 {nonco2[4]},
+                  6 {nonco2[5]}, 7 {nonco2[6]}, 8 {nonco2[7]}, 9 {nonco2[8]}, 10 {nonco2[9]},
+                  11 {nonco2[10]}, 12 {nonco2[11]}, 13 {nonco2[12]}, 14 {nonco2[13]}, 15 {nonco2[14]},
+                  16 {nonco2[15]}, 17 {nonco2[16]}, 18 {nonco2[17]}, 19 {nonco2[18]}, 20 {nonco2[19]},
+                  21 {nonco2[20]}, 22 {nonco2[21]}, 23 {nonco2[22]}, 24 {nonco2[23]}, 25 {nonco2[24]},
+                  26 {nonco2[25]}, 27 {nonco2[26]}, 28 {nonco2[27]}, 29 {nonco2[28]}, 30 {nonco2[29]},
+                  31 {nonco2[30]}, 32 {nonco2[31]}, 33 {nonco2[32]}, 34 {nonco2[33]}, 35 {nonco2[34]},
+                  36 {nonco2[35]}, 37 {nonco2[36]}, 38 {nonco2[37]}, 39 {nonco2[38]}, 40 {nonco2[39]},
+                  41 {nonco2[40]}, 42 {nonco2[41]}, 43 {nonco2[42]}, 44 {nonco2[43]}, 45 {nonco2[44]},
+                  46 {nonco2[45]}, 47 {nonco2[46]}, 48 {nonco2[47]}, 49 {nonco2[48]}, 50 {nonco2[49]},
+                  51 {nonco2[50]}, 52 {nonco2[51]}, 53 {nonco2[52]}, 54 {nonco2[53]}, 55 {nonco2[54]},
+                  56 {nonco2[55]}, 57 {nonco2[56]}, 58 {nonco2[57]}, 59 {nonco2[58]}, 60 {nonco2[59]},
+                  61 {nonco2[60]}, 62 {nonco2[61]}, 63 {nonco2[62]}, 64 {nonco2[63]}, 65 {nonco2[64]},
+                  66 {nonco2[65]}, 67 {nonco2[66]}, 68 {nonco2[67]}, 69 {nonco2[68]}, 70 {nonco2[69]},
+                  71 {nonco2[70]}, 72 {nonco2[71]}, 73 {nonco2[72]}, 74 {nonco2[73]}, 75 {nonco2[74]},
+                  76 {nonco2[75]}, 77 {nonco2[76]}, 78 {nonco2[77]}, 79 {nonco2[78]}, 80 {nonco2[79]},
+                  81 {nonco2[80]}, 82 {nonco2[81]}, 83 {nonco2[82]}, 84 {nonco2[83]}, 85 {nonco2[84]},
+                  86 {nonco2[85]}, 87 {nonco2[86]}, 88 {nonco2[87]}, 89 {nonco2[88]}, 90 {nonco2[89]},
+                  91 {nonco2[90]}, 92 {nonco2[91]}, 93 {nonco2[92]}, 94 {nonco2[93]}, 95 {nonco2[94]},
+                  96 {nonco2[95]}, 97 {nonco2[96]}, 98 {nonco2[96]}, 99 {nonco2[96]}, 100 {nonco2[96]}/
         iirf_horizon Time horizon for IIRF in yr                       /100/
-        tocean0  two-layer "deep ocean" temperature change             /{t2*0.85/0.881}/
-        T1_init    two-layer "surface" temperature change              /{t1}/
+        t1_0     three-layer "mixed layer" temperature change          /{t1}/
+        t2_0     three-layer "mid-ocean" temperature change            /{t2}/
+        t3_0     three-layer "deep-ocean" temperature change           /{t3}/
         EBM_A11  Fast component of mixed layer temperature             /{cr[0]}/
         EBM_A12  Intermediate component of mixed layer temperature     /{cr[1]}/
         EBM_A13  Slow component of mixed layer temperature             /{cr[2]}/
@@ -210,7 +219,7 @@ PARAMETERS
         cost1(t) = pbacktime(t)*sigma(t)/expcost2/1000;
 
         etree(t) = eland0*(1-deland)**(t.val-1);
-        cumetree("1")= 186.3; loop(t,cumetree(t+1)=cumetree(t)+etree(t)*(5/3.664););
+        cumetree("1")= 190.9; loop(t,cumetree(t+1)=cumetree(t)+etree(t)*(5/3.664););
 
         rr(t) = 1/((1+prstp)**(tstep*(t.val-1)));
         optlrsav = (dk + .004)/(dk + .004*elasmu + prstp)*gama;
@@ -220,12 +229,11 @@ PARAMETERS
 
 VARIABLES
         MIU(t)          Emission control rate GHGs
-        FORC(t)         Increase in radiative forcing (watts per m2 from 1900)
-        T1(t)         Increase temperature of atmosphere (degrees C from 1900)
-        TOCEAN(t)       Increase temperatureof lower oceans (degrees C from 1900)
-        MAT(t)          Carbon concentration increase in atmosphere (GtC from 1750)
-        MU(t)           Carbon concentration increase in shallow oceans (GtC from 1750)
-        ML(t)           Carbon concentration increase in lower oceans (GtC from 1750)
+        FORC(t)         Increase in radiative forcing (watts per m2 from 1750)
+        T1(t)           Increase temperature of atmosphere+mixed layer (degrees C from 1850-1900)
+        T2(t)           Increase temperature of mid ocean (degrees C from 1850-1900)
+        T3(t)           Increase temperature of deep ocean (degrees C from 1850-1900)
+        co2(t)          Carbon concentration increase in atmosphere (GtC from 1750)
         E(t)            Total CO2 emissions (GtCO2 per year)
         EIND(t)         Industrial emissions (GtCO2 per year)
         C(t)            Consumption (trillions 2005 US dollars per year)
@@ -241,7 +249,7 @@ VARIABLES
         DAMFRAC(t)      Damages as fraction of gross output
         ABATECOST(t)    Cost of emissions reductions  (trillions 2005 USD per year)
         MCABATE(t)      Marginal cost of abatement (2005$ per ton CO2)
-        CCA(t)          Cumulative industrial carbon emissions (GTC)
+        CCA(t)          Cumulative industrial carbon emissions (GtC)
         CCATOT(t)       Total carbon emissions (GtC)
         PERIODU(t)      One period utility function
         CPRICE(t)       Carbon price (2005$ per ton of CO2)
@@ -255,15 +263,15 @@ VARIABLES
         iirf(t)         time-integrated impulse response
         atfrac(t)       Atmospheric share since 1850;
 
-NONNEGATIVE VARIABLES  MIU, T1, MAT, MU, ML, Y, YGROSS, C, K, I, alpha;
+NONNEGATIVE VARIABLES  MIU, T1, co2, MU, ML, Y, YGROSS, C, K, I, alpha;
 
 EQUATIONS
 *Emissions and Damages
         EEQ(t)          Emissions equation
         EINDEQ(t)       Industrial emissions
-        CCACCA(t)       Cumulative industrial carbon emissions
+        CCAEQ(t)       Cumulative industrial carbon emissions
         CCATOTEQ(t)     Cumulative total carbon emissions
-        FORCE(t)        Radiative forcing equation
+        FORCEQ(t)        Radiative forcing equation
         DAMFRACEQ(t)    Equation for damage fraction
         DAMEQ(t)        Damage equation
         ABATEEQ(t)      Cost of emissions reductions equation
@@ -271,10 +279,11 @@ EQUATIONS
         CARBPRICEEQ(t)  Carbon price equation from abatement
 
 *Climate and carbon cycle
-        MMAT(t)          Atmospheric concentration equation
+        co2eq(t)          Atmospheric concentration equation
         ATFRACEQ(t)      Atmospheric airborne fraction equation
-        T1EQ(t)          Temperature-climate equation for atmosphere
-        TOCEANEQ(t)      Temperature-climate equation for lower oceans
+        T1EQ(t)          Temperature-climate equation for atmosphere + mixed layer
+        T2EQ(t)          Temperature-climate equation for mid ocean
+        T3EQ(t)          Temperature-climate equation for deep ocean
         ALPHAEQ(t)       Scale factor equation
         IIRFEQ(t)        IIRF equation
         CBOX1EQ(t)       Carbon box 1 equation
@@ -302,9 +311,9 @@ EQUATIONS
 * Emissions and Damages
  eeq(t)..             E(t)           =E= EIND(t) + etree(t);
  eindeq(t)..          EIND(t)        =E= sigma(t) * YGROSS(t) * (1-(MIU(t)));
- ccacca(t+1)..        CCA(t+1)       =E= CCA(t)+ EIND(t)*tstep/3.664;
+ ccaeq(t+1)..         CCA(t+1)       =E= CCA(t)+ EIND(t)*tstep/3.664;
  ccatoteq(t)..        CCATOT(t)      =E= CCA(t)+cumetree(t);
- force(t)..           FORC(t)        =E= fco22x * ((log((MAT(t)/mateq))/log(2))) + forcoth(t);
+ forceq(t)..          FORC(t)        =E= fco22x * ((log((CO2(t)/co2_1750))/log(2))) + forcoth(t);
  damfraceq(t) ..      DAMFRAC(t)     =E= (a1*T1(t))+(a2*T1(t)**a3) ;
  dameq(t)..           DAMAGES(t)     =E= YGROSS(t) * DAMFRAC(t);
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
@@ -312,17 +321,18 @@ EQUATIONS
  carbpriceeq(t)..     CPRICE(t)      =E= pbacktime(t) * (MIU(t))**(expcost2-1);
 
 * Climate and carbon cycle
- atfraceq(t)..        atfrac(t)      =E= ((mat(t)-mateq)/(ccatot(t)+0.0000001));
- iirfeq(t)..          IIRF(t)        =E= r0 + rc * (1-atfrac(t)) * ccatot(t) + rt * T1(t);
+ atfraceq(t)..        atfrac(t)      =E= ((co2(t)-co2_1750)/(ccatot(t)+0.0000001));
+ iirfeq(t)..          IIRF(t)        =E= r0 + ru * (1-atfrac(t)) * ccatot(t) + rt * T1(t) + ra * atfrac(t) * ccatot(t);
  alphaeq(t)..         ALPHA(t)       =E= g0 * exp(iirf(t)/g1);
  cbox1eq(t+1)..       CBOX1(t+1)     =E= a("1")*E(t)*tstep/3.664 + cbox1(t) * exp(-tstep/(alpha(t)*tau("1")));
  cbox2eq(t+1)..       CBOX2(t+1)     =E= a("2")*E(t)*tstep/3.664 + cbox2(t) * exp(-tstep/(alpha(t)*tau("2")));
  cbox3eq(t+1)..       CBOX3(t+1)     =E= a("3")*E(t)*tstep/3.664 + cbox3(t) * exp(-tstep/(alpha(t)*tau("3")));
  cbox4eq(t+1)..       CBOX4(t+1)     =E= a("4")*E(t)*tstep/3.664 + cbox4(t) * exp(-tstep/(alpha(t)*tau("4")));
- T1eq(t+1)..        T1(t+1)      =E= EBM_A11 * T1(t) + EBM_A12 * TOCEAN(t) + EBM_B1 * FORC(t);
- toceaneq(t+1)..      TOCEAN(t+1)    =E= EBM_A21 * T1(t) + EBM_A22 * TOCEAN(t) + EBM_B2 * FORC(t);
- mmat(t)..            MAT(t)         =E= mateq + cbox1(t) + cbox2(t) + cbox3(t) + cbox4(t);
-* constrainT(t)..      T1(t)        =L= 2;
+ T1eq(t+1)..          T1(t+1)        =E= EBM_A11 * T1(t) + EBM_A12 * T2(t) + EBM_A13 * T3(t) + EBM_B1 * FORC(t);
+ t2eq(t+1)..          T2(t+1)        =E= EBM_A21 * T1(t) + EBM_A22 * T2(t) + EBM_A23 * T3(t) + EBM_B2 * FORC(t);
+ t3eq(t+1)..          T3(t+1)        =E= EBM_A31 * T1(t) + EBM_A32 * T2(t) + EBM_A33 * T3(t) + EBM_B3 * FORC(t);
+ co2eq(t)..           co2(t)         =E= co2_1750 + cbox1(t) + cbox2(t) + cbox3(t) + cbox4(t);
+* constrainT(t)..     T1(t)          =L= 2;
 
 * Economic variables
  ygrosseq(t)..        YGROSS(t)      =E= (al(t)*(L(t)/1000)**(1-GAMA))*(K(t)**GAMA);
@@ -350,15 +360,17 @@ MIU.up(t)$(t.val<30)  = 1;
 ** Upper and lower bounds for stability
 K.LO(t)         = 1;
 EIND.LO(t)      = -50;
-MAT.LO(t)       = 10;
+co2.LO(t)       = 10;
 MU.LO(t)        = 100;
 ML.LO(t)        = 1000;
 C.LO(t)         = 2;
-TOCEAN.UP(t)    = 20;
-TOCEAN.LO(t)    = -1;
-T1.UP(t)      = 20;
+T2.UP(t)        = 15;
+T2.LO(t)        = -1;
+T3.UP(t)        = 10;
+T3.LO(t)        = -1;
+T1.UP(t)        = 20;
 CPC.LO(t)       = .01;
-T1.UP(t)      = 12;
+T1.UP(t)        = 12;
 IIRF.UP(t)      = 97;
 IIRF.LO(t)      = 16;
 alpha.lo(t)     = 0.01;
@@ -370,11 +382,12 @@ lag10(t) =  yes$(t.val gt card(t)-10);
 S.FX(lag10(t)) = optlrsav;
 
 * Initial conditions
-CCA.FX(tfirst)    = 420.4902535;
+CCA.FX(tfirst)    = 470.55;
 K.FX(tfirst)      = k0;
-MAT.FX(tfirst)     = mat0;
-T1.FX(tfirst)   = T1_init;
-TOCEAN.FX(tfirst) = tocean0;
+co2.FX(tfirst)     = co2_2020;
+T1.FX(tfirst)   = T1_0;
+T2.FX(tfirst)   = T2_0;
+T3.FX(tfirst)   = T3_0;
 IIRF.l(tfirst)    = 50;
 atfrac.l(tfirst)  = 0.526;
 alpha.l(tfirst)   = 0.81;
@@ -385,34 +398,34 @@ cbox3.fx(tfirst)  = icbox3;
 cbox4.fx(tfirst)  = icbox4;
 
 ** Solution options
-option iterlim = 99900;
+option iterlim = 99999;
 option reslim  = 99999;
 option solprint = on;
 option limrow = 0;
 option limcol = 0;
-model  CO2 /all/;
+model  DICE /all/;
 
 * For base run, this subroutine calculates Hotelling rents
 * Carbon price is maximum of Hotelling rent or baseline price
 * The cprice equation is different from 2013R. Not sure what went wrong.
 If (ifopt eq 0,
        a2 = 0;
-       solve CO2 maximizing UTILITY using nlp;
+       solve DICE maximizing UTILITY using nlp;
        photel(t)=cprice.l(t);
        a2 = a20;
       cprice.up(t)$(t.val<tnopol+1) = max(photel(t),cpricebase(t));
 );
 
 miu.fx('1')$(ifopt=1) = miu0;
-solve co2 maximizing utility using nlp;
-solve co2 maximizing utility using nlp;
-solve co2 maximizing utility using nlp;
+solve DICE maximizing utility using nlp;
+solve DICE maximizing utility using nlp;
+solve DICE maximizing utility using nlp;
 
 ** POST-SOLVE
 * Calculate social cost of carbon and other variables
 scc(t)        = -1000*eeq.m(t)/(.00001+cc.m(t));
-atfrac2010(t) = ((mat.l(t)-mat0)/(.00001+ccatot.l(t)-ccatot.l('1')  ));
-ppm(t)        = mat.l(t)/2.124;
+atfrac2010(t) = ((co2.l(t)-co2_2020)/(.00001+ccatot.l(t)-ccatot.l('1')  ));
+ppm(t)        = co2.l(t)/{carbon_convert};
 
 * Produces a file "Dice2016R-091916ap.csv" in the base directory
 * For ALL relevant model outputs, see 'PutOutputAllT.gms' in the Include folder.
@@ -430,9 +443,11 @@ put / "Atmospheric concentrations ppm" ;
 Loop (T, put ppm(t));
 put / "Atmospheric Temperature rel. 1850-1900" ;
 Loop (T, put T1.l(T));
-put / "Ocean Temperature rel. 1850-1900" ;
-Loop (T, put TOCEAN.l(T));
-put / "Output Net Net) " ;
+put / "Mid-ocean Temperature rel. 1850-1900" ;
+Loop (T, put T2.l(T));
+put / "Deep-ocean temperature rel. 1850-1900" ;
+Loop (T, put T3.l(T));
+put / "Output Net Net " ;
 Loop (T, put Y.l(T));
 put / "Climate Damages fraction output" ;
 Loop (T, put DAMFRAC.l(T));
@@ -485,7 +500,7 @@ Loop (T, put cca.l(t));
 put / "Cumulative total emissions" ;
 Loop (T, put ccatot.l(t));
 put / "Atmospheric concentrations Gt" ;
-Loop (T, put mat.l(t));
+Loop (T, put co2.l(t));
 put / "Total Emissions GTCO2 per year" ;
 Loop (T, put E.l(T));
 put / "Atmospheric fraction since 1850" ;

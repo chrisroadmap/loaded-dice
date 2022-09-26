@@ -12,7 +12,7 @@ from fair.interface import fill, initialise
 from fair.forcing.ghg import meinshausen2020
 
 here = os.path.dirname(os.path.realpath(__file__))
-os.makedirs(os.path.join(here, '..', 'data_output'), exist_ok=True)
+os.makedirs(os.path.join(here, '..', 'data_output', 'climate_configs'), exist_ok=True)
 
 
 erf_2co2 = meinshausen2020(
@@ -47,7 +47,6 @@ solar_5yr[54:] = 0
 species, properties = read_properties()
 df_configs =pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
 configs = np.array(list(df_configs.index))
-print(configs)
 
 trend_shape = np.ones(151)
 trend_shape[:55] = np.linspace(0, 1, 55)
@@ -180,7 +179,7 @@ pl.show()
 
 for i, scenario in enumerate(scenarios):
     df = pd.DataFrame((np.nansum(f.forcing[54:, i, :, :], axis=-1) - f.forcing[54:, i, :, 2] - f.forcing[54:, i, :, 54:56].mean(axis=-1)), index=range(2020, 2505, 5), columns=configs).T
-    df.to_csv(os.path.join(here, '..', 'data_output', f'anthropogenic-non-co2-forcing_{scenario}.csv'))
+    df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'anthropogenic_non-co2_forcing_{scenario}.csv'))
 
     df = pd.DataFrame(f.temperature[54, i, :, :]-f.temperature[20:30, i, :, :].mean(axis=0), index=configs, columns=['mixed_layer', 'mid_ocean', 'deep_ocean'])
-    df.to_csv(os.path.join(here, '..', 'data_output', f'temperature_{scenario}.csv'))
+    df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'temperature_{scenario}.csv'))

@@ -10,29 +10,30 @@ import scipy.linalg
 # C-cycle spin-ups.
 
 here = os.path.dirname(os.path.realpath(__file__))
-os.makedirs(os.path.join(here, '..', 'data_output'), exist_ok=True)
+os.makedirs(os.path.join(here, '..', 'data_output', 'climate_configs'), exist_ok=True)
 
-calibration = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'))
+calibration = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
+configs = calibration.index
 
 # required for running DICE
 tstep = 5
 n_box = 3
 output=np.zeros((1001, 13))
 
-for i in tqdm(range(1001)):
+for i, config in tqdm(enumerate(configs)):
     # need edit to heat capacities (W m-2 K-1 yr)
-    f2x = calibration['F_4xCO2'][i] * 0.5  # we use Myhre log relationship anyway for CO2 forcing in DICE
+    f2x = calibration.loc[config, 'F_4xCO2'] * 0.5  # we use Myhre log relationship anyway for CO2 forcing in DICE
     ohc = [
-        calibration['c1'][i]/tstep,
-        calibration['c2'][i]/tstep,
-        calibration['c3'][i]/tstep
+        calibration.loc[config, 'c1']/tstep,
+        calibration.loc[config, 'c2']/tstep,
+        calibration.loc[config, 'c3']/tstep
     ]
     oht = [
-        calibration['kappa1'][i],
-        calibration['kappa2'][i],
-        calibration['kappa3'][i]
+        calibration.loc[config, 'kappa1'],
+        calibration.loc[config, 'kappa2'],
+        calibration.loc[config, 'kappa3']
     ]
-    eps = calibration['epsilon'][i]
+    eps = calibration.loc[config, 'epsilon']
 
     eb_matrix = np.zeros((n_box, n_box))
 
@@ -68,5 +69,5 @@ for i in tqdm(range(1001)):
     output[i, 9:12] = forcing_vector_d
     output[i, 12] = f2x
 
-df = pd.DataFrame(output, columns=['a11','a12','a13','a21','a22','a23','a31','a32','a33','b1','b2','b3','f2x'])
-df.to_csv(os.path.join(here, '..', 'data_output', 'climate_response_params.csv'))
+df = pd.DataFrame(output, columns=['a11','a12','a13','a21','a22','a23','a31','a32','a33','b1','b2','b3','f2x'], index=configs)
+df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'climate_response_params.csv'))

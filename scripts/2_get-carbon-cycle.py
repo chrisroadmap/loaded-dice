@@ -12,7 +12,7 @@ from fair.interface import fill, initialise
 from fair.forcing.ghg import meinshausen2020
 
 here = os.path.dirname(os.path.realpath(__file__))
-os.makedirs(os.path.join(here, '..', 'data_output'), exist_ok=True)
+os.makedirs(os.path.join(here, '..', 'data_output', 'climate_configs'), exist_ok=True)
 
 
 erf_2co2 = meinshausen2020(
@@ -47,7 +47,6 @@ solar_5yr[54:] = 0
 species, properties = read_properties()
 df_configs =pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
 configs = np.array(list(df_configs.index))
-print(configs)
 
 trend_shape = np.ones(55)
 trend_shape[:55] = np.linspace(0, 1, 55)
@@ -140,11 +139,8 @@ initialise(f.airborne_emissions, 0)
 
 f.run()
 
-print(f.gas_partitions.loc[dict(scenario='ssp126', specie='CO2', config=configs[0])]/3.664)
-print(f.concentration.loc[dict(scenario='ssp126', specie='CO2', timebounds=2020)])
-
 for i, scenario in enumerate(scenarios):
     df_cc = pd.DataFrame(f.gas_partitions.loc[dict(scenario=scenario, specie='CO2')] * 12.011 / 44.009, columns=['geological', 'slow', 'mid', 'fast'], index=configs)
     df_co2 = pd.DataFrame(f.concentration.loc[dict(scenario=scenario, specie='CO2', timebounds=2020)], columns=['co2_2020'], index=configs)
     df = pd.concat([df_cc, df_co2], axis=1)
-    df.to_csv(os.path.join(here, '..', 'data_output', f'gas_partitions_{scenario}.csv'))
+    df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'gas_partitions_{scenario}.csv'))
