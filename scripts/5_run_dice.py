@@ -26,7 +26,7 @@ df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs',
 df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'climate_response_params.csv'), index_col=0)
 df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp245.csv'), index_col=0)
 
-for run, config in tqdm(enumerate(configs[:1])):
+for run, config in tqdm(enumerate(configs[:2])):
     t1 = df_temp.loc[config, 'mixed_layer']
     t2 = df_temp.loc[config, 'mid_ocean']
     t3 = df_temp.loc[config, 'deep_ocean']
@@ -69,11 +69,12 @@ PARAMETERS
 ** Preferences
         elasmu   Elasticity of marginal utility of consumption         /1.45/
         prstp    Initial rate of social time preference per year       /0.015/
-** Population and technology
+** Population and technology (updated by CS)
         gama     Capital elasticity in production function             /0.300/
-        pop0     Initial world population 2015 (millions)              /7841/
-        popadj   Growth rate to calibrate to 2050 pop projection       /0.134/
-        popasym  Asymptotic population (millions)                      /11500/
+        popx2    Quadradtic term of population growth 2020-2100        /-15.588/
+        popx1    Linear term of population growth 2020-2100            /436.41/
+        popx0    Intercept of population growth 2020-2100 (millions)   /7393.8/
+        popinfty Post-2100 constant population (millions)              /10308/
         dk       Depreciation rate on capital (per year)               /0.100/
         q0       Initial world gross output 2015 (trill 2010 USD)      /105.5/
         k0       Initial capital value 2015 (trill 2010 USD)           /223/
@@ -183,18 +184,18 @@ PARAMETERS
         etree(t)      Emissions from deforestation
         cumetree(t)   Cumulative from land
         cost1(t)      Adjusted cost for backstop
-        gfacpop(t)    Growth factor population
         pbacktime(t)  Backstop price
         optlrsav      Optimal long-run savings rate used for transversality
         scc(t)        Social cost of carbon
         cpricebase(t) Carbon price in base case
         photel(t)     Carbon Price under no damages (Hotelling rent condition)
-        ppm(t)        Atmospheric concentrations parts per million
-        atfrac2010(t) Atmospheric share since 2010;
+        ppm(t)        Atmospheric concentrations parts per million;
 
 * Program control definitions
         tfirst(t) = yes$(t.val eq 1);
         tlast(t)  = yes$(t.val eq card(t));
+        tearly(t) = yes$(t.val le 17);
+        tlate(t)  = yes$(t.val gt 17);
 * Parameters for carbon cycle
         g1 = sum(box,
                 a(box) * tau(box) *
@@ -206,9 +207,8 @@ PARAMETERS
 * Further definitions of parameters
         a20 = a2;
         sig0 = e0/(q0*(1-miu0));
-        l("1") = pop0;
-        loop(t, l(t+1)=l(t););
-        loop(t, l(t+1)=l(t)*(popasym/L(t))**popadj ;);
+        loop(tearly, l(tearly) = popx2*tearly.val**2 + popx1*tearly.val + popx0;);
+        l(tlate) = l("17");
 
         ga(t)=ga0*exp(-dela*5*((t.val-1)));
         al("1") = a0; loop(t, al(t+1)=al(t)/((1-ga(t))););
@@ -322,12 +322,13 @@ EQUATIONS
 
 * Climate and carbon cycle
  atfraceq(t)..        atfrac(t)      =E= ((co2(t)-co2_1750)/(ccatot(t)+0.0000001));
- iirfeq(t)..          IIRF(t)        =E= r0 + ru * (1-atfrac(t)) * ccatot(t) + rt * T1(t) + ra * atfrac(t) * ccatot(t);
+ iirfeq(t)..          IIRF(t)        =E= r0 + ru * (1-atfrac(t)) * ccatot(t)*3.664 + rt * T1(t) + ra * atfrac(t) * ccatot(t)*3.664;
  alphaeq(t)..         ALPHA(t)       =E= g0 * exp(iirf(t)/g1);
- cbox1eq(t+1)..       CBOX1(t+1)     =E= a("1")*E(t)*tstep/3.664 + cbox1(t) * exp(-tstep/(alpha(t)*tau("1")));
- cbox2eq(t+1)..       CBOX2(t+1)     =E= a("2")*E(t)*tstep/3.664 + cbox2(t) * exp(-tstep/(alpha(t)*tau("2")));
- cbox3eq(t+1)..       CBOX3(t+1)     =E= a("3")*E(t)*tstep/3.664 + cbox3(t) * exp(-tstep/(alpha(t)*tau("3")));
- cbox4eq(t+1)..       CBOX4(t+1)     =E= a("4")*E(t)*tstep/3.664 + cbox4(t) * exp(-tstep/(alpha(t)*tau("4")));
+* cbox4eq(t+1)..       CBOX4(t+1)     =E= a("4")*E(t)*tstep/3.664 + cbox4(t) * exp(-tstep/(alpha(t)*tau("4")));
+ cbox1eq(t+1)..       CBOX1(t+1)     =E= a("1")*E(t)/3.664 * alpha(t)*tau("1") * (1 - exp(-tstep/(alpha(t)*tau("1"))))  + cbox1(t) * exp(-tstep/(alpha(t)*tau("1")));
+ cbox2eq(t+1)..       CBOX2(t+1)     =E= a("2")*E(t)/3.664 * alpha(t)*tau("2") * (1 - exp(-tstep/(alpha(t)*tau("2"))))  + cbox2(t) * exp(-tstep/(alpha(t)*tau("2")));
+ cbox3eq(t+1)..       CBOX3(t+1)     =E= a("3")*E(t)/3.664 * alpha(t)*tau("3") * (1 - exp(-tstep/(alpha(t)*tau("3"))))  + cbox3(t) * exp(-tstep/(alpha(t)*tau("3")));
+ cbox4eq(t+1)..       CBOX4(t+1)     =E= a("4")*E(t)/3.664 * alpha(t)*tau("4") * (1 - exp(-tstep/(alpha(t)*tau("4"))))  + cbox4(t) * exp(-tstep/(alpha(t)*tau("4")));
  T1eq(t+1)..          T1(t+1)        =E= EBM_A11 * T1(t) + EBM_A12 * T2(t) + EBM_A13 * T3(t) + EBM_B1 * FORC(t);
  t2eq(t+1)..          T2(t+1)        =E= EBM_A21 * T1(t) + EBM_A22 * T2(t) + EBM_A23 * T3(t) + EBM_B2 * FORC(t);
  t3eq(t+1)..          T3(t+1)        =E= EBM_A31 * T1(t) + EBM_A32 * T2(t) + EBM_A33 * T3(t) + EBM_B3 * FORC(t);
@@ -424,7 +425,6 @@ solve DICE maximizing utility using nlp;
 ** POST-SOLVE
 * Calculate social cost of carbon and other variables
 scc(t)        = -1000*eeq.m(t)/(.00001+cc.m(t));
-atfrac2010(t) = ((co2.l(t)-co2_2020)/(.00001+ccatot.l(t)-ccatot.l('1')  ));
 ppm(t)        = co2.l(t)/{carbon_convert};
 
 * Produces a file "Dice2016R-091916ap.csv" in the base directory
@@ -436,7 +436,7 @@ put results;
 put // "Period";
 Loop (T, put T.val);
 put / "Year" ;
-Loop (T, put (2010+(TSTEP*T.val) ));
+Loop (T, put (2015+(TSTEP*T.val) ));
 put / "Industrial Emissions GTCO2 per year" ;
 Loop (T, put EIND.l(T));
 put / "Atmospheric concentrations ppm" ;
@@ -503,10 +503,8 @@ put / "Atmospheric concentrations Gt" ;
 Loop (T, put co2.l(t));
 put / "Total Emissions GTCO2 per year" ;
 Loop (T, put E.l(T));
-put / "Atmospheric fraction since 1850" ;
+put / "Airborne fraction since 1750" ;
 Loop (T, put atfrac.l(t));
-put / "Atmospheric fraction since 2010" ;
-Loop (T, put atfrac2010(t));
 put / "alpha" ;
 Loop (T, put alpha.l(t));
 put / "IIRF" ;

@@ -1,15 +1,14 @@
 import os
 
-from climateforcing.utils import mkdir_p
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
 
 here = os.path.dirname(os.path.realpath(__file__))
 
-mkdir_p(os.path.join(here, '..', 'figures'))
+os.makedirs(os.path.join(here, '..', 'figures'), exist_ok=True)
 
-ensemble_size=2237
+ensemble_size=100
 
 pl.rcParams['figure.figsize'] = (12/2.54, 12/2.54)
 pl.rcParams['font.size'] = 9
@@ -94,7 +93,7 @@ for scenario in ['dice', 'dice_1p5deglowOS', 'dice_below2deg']:
             color='0.6'
         )
         ax[i//2,i%2].plot(np.arange(2015, 2515, 5), np.nanmedian(outputs[var], axis=1), color='k')
-        ax[i//2,i%2].set_xlim(2020,2125)
+        ax[i//2,i%2].set_xlim(2015,2125)
         ax[i//2,i%2].set_title(title[var])
         ax[i//2,i%2].set_ylabel(yunit[var])
         ax[i//2,i%2].set_ylim(ylim[var])
