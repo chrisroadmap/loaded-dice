@@ -26,7 +26,7 @@ df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs',
 df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'climate_response_params.csv'), index_col=0)
 df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp245.csv'), index_col=0)
 
-for run, config in tqdm(enumerate(configs[:2])):
+for run, config in tqdm(enumerate(configs[:10])):
     t1 = df_temp.loc[config, 'mixed_layer']
     t2 = df_temp.loc[config, 'mid_ocean']
     t3 = df_temp.loc[config, 'deep_ocean']
@@ -74,11 +74,10 @@ PARAMETERS
         popx2    Quadradtic term of population growth 2020-2100        /-15.588/
         popx1    Linear term of population growth 2020-2100            /436.41/
         popx0    Intercept of population growth 2020-2100 (millions)   /7393.8/
-        popinfty Post-2100 constant population (millions)              /10308/
         dk       Depreciation rate on capital (per year)               /0.100/
-        q0       Initial world gross output 2015 (trill 2010 USD)      /105.5/
-        k0       Initial capital value 2015 (trill 2010 USD)           /223/
-        a0       Initial level of total factor productivity            /5.115/
+        q0       Initial world gross output 2020 (trill 2020 USD)      /133.7/
+        k0       Initial capital value 2019                            /318.7/
+        a0       Initial level of total factor productivity            /5.612/
         ga0      Initial growth rate for TFP per 5 years               /0.076/
         dela     Decline rate of TFP per 5 years                       /0.005/
 ** Emissions parameters
