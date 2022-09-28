@@ -30,7 +30,7 @@ df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs',
 df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'un-population', 'un-median-projections-20220928.csv'), index_col=0)
 pop = df_pop['population_bn'].values
 
-for run, config in tqdm(enumerate(configs[:100])):
+for run, config in tqdm(enumerate(configs[:10])):
     t1 = df_temp.loc[config, 'mixed_layer']
     t2 = df_temp.loc[config, 'mid_ocean']
     t3 = df_temp.loc[config, 'deep_ocean']
@@ -110,7 +110,7 @@ PARAMETERS
         deland   Decline rate of land emissions (per period)           /0.115/
         e0       Industrial emissions 2020 (GtCO2 per year)            /37.39/
 * projections from RCMIP (should use GCP; TODO)
-        miu0     Initial emissions control rate for base case 2015     /0.03/
+        miu0     Initial emissions control rate for base case 2015     /0.0/
 * Initial Conditions
         co2_2020 Initial concentration in atmosphere 2020 (GtC)        /{co2_2020*carbon_convert}/
         co2_1750 Pre-industrial concentration atmosphere  (GtC)        /{co2_1750*carbon_convert}/
