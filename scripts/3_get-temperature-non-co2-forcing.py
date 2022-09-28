@@ -178,8 +178,16 @@ pl.suptitle('Temperature anomaly')
 pl.show()
 
 for i, scenario in enumerate(scenarios):
+    # calculate "effective" F2x for translation from Meinshausen formula in FaIR to log formula in DICE
+    effective_f2x = f.forcing[54, i, :, 2] * np.log(2) / np.log(f.concentration[54, i, :, 2] / f.concentration[0, i, :, 2])
+    df = pd.DataFrame(np.array([f.forcing[54, i, :, 2], effective_f2x]).T, index=configs, columns=['co2_forcing_2020', 'effective_f2x'])
+    df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'co2_forcing_{scenario}.csv'))
+
     df = pd.DataFrame((np.nansum(f.forcing[54:, i, :, :], axis=-1) - f.forcing[54:, i, :, 2] - f.forcing[54:, i, :, 54:56].mean(axis=-1)), index=range(2020, 2505, 5), columns=configs).T
     df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'anthropogenic_non-co2_forcing_{scenario}.csv'))
 
-    df = pd.DataFrame(f.temperature[54, i, :, :]-f.temperature[20:30, i, :, :].mean(axis=0), index=configs, columns=['mixed_layer', 'mid_ocean', 'deep_ocean'])
+    #df = pd.DataFrame(f.temperature[54, i, :, :]-f.temperature[20:30, i, :, :].mean(axis=0), index=configs, columns=['mixed_layer', 'mid_ocean', 'deep_ocean'])
+    df = pd.DataFrame(f.temperature[54, i, :, :], index=configs, columns=['mixed_layer', 'mid_ocean', 'deep_ocean'])
+    df_offset = pd.DataFrame(f.temperature[20:30, i, :, 0].mean(axis=0), index=configs, columns=['tas_offset_1850_1900'])
+    df = pd.concat((df, df_offset), axis=1)
     df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'temperature_{scenario}.csv'))

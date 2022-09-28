@@ -10,6 +10,9 @@ os.makedirs(os.path.join(here, '..', 'figures'), exist_ok=True)
 
 ensemble_size=100
 
+df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
+configs = df_configs.index
+
 pl.rcParams['figure.figsize'] = (12/2.54, 12/2.54)
 pl.rcParams['font.size'] = 9
 pl.rcParams['font.family'] = 'Arial'
@@ -34,9 +37,9 @@ for scenario in ['dice', 'dice_1p5deglowOS', 'dice_below2deg']:
     outputs['SCC'] = np.ones((100, ensemble_size)) * np.nan
     outputs['E'] = np.ones((100, ensemble_size)) * np.nan
     outputs['F'] = np.ones((100, ensemble_size)) * np.nan
-    for run in range(ensemble_size):
+    for run, config in enumerate(configs[:ensemble_size]):
         try:
-            dfs.append(pd.read_csv(os.path.join(here, "..", "data_output", scenario, f"{run:04d}.csv"), index_col=0))
+            dfs.append(pd.read_csv(os.path.join(here, "..", "data_output", scenario, f"{config:07d}.csv"), index_col=0))
         except:
             pass
 
@@ -81,19 +84,19 @@ for scenario in ['dice', 'dice_1p5deglowOS', 'dice_below2deg']:
 
     for i, var in enumerate(['E', 'CO2', 'T', 'SCC']):
         ax[i//2,i%2].fill_between(
-            np.arange(2015, 2515, 5),
+            np.arange(2020, 2520, 5),
             np.nanpercentile(outputs[var], 5, axis=1),
             np.nanpercentile(outputs[var], 95, axis=1),
             color='0.8'
         )
         ax[i//2,i%2].fill_between(
-            np.arange(2015, 2515, 5),
+            np.arange(2020, 2520, 5),
             np.nanpercentile(outputs[var], 16, axis=1),
             np.nanpercentile(outputs[var], 84, axis=1),
             color='0.6'
         )
-        ax[i//2,i%2].plot(np.arange(2015, 2515, 5), np.nanmedian(outputs[var], axis=1), color='k')
-        ax[i//2,i%2].set_xlim(2015,2125)
+        ax[i//2,i%2].plot(np.arange(2020, 2520, 5), np.nanmedian(outputs[var], axis=1), color='k')
+        ax[i//2,i%2].set_xlim(2020,2125)
         ax[i//2,i%2].set_title(title[var])
         ax[i//2,i%2].set_ylabel(yunit[var])
         ax[i//2,i%2].set_ylim(ylim[var])

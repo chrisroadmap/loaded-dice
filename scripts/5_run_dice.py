@@ -24,14 +24,19 @@ os.makedirs(os.path.join(here, '..', 'data_output', 'dice'), exist_ok=True)
 df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_ssp245.csv'), index_col=0)
 df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'gas_partitions_ssp245.csv'), index_col=0)
 df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'climate_response_params.csv'), index_col=0)
+df_co2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'co2_forcing_ssp245.csv'), index_col=0)
 df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp245.csv'), index_col=0)
 
-for run, config in tqdm(enumerate(configs[:10])):
+df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'un-population', 'un-median-projections-20220928.csv'), index_col=0)
+pop = df_pop['population_bn'].values
+
+for run, config in tqdm(enumerate(configs[:100])):
     t1 = df_temp.loc[config, 'mixed_layer']
     t2 = df_temp.loc[config, 'mid_ocean']
     t3 = df_temp.loc[config, 'deep_ocean']
     nonco2 = df_nonco2.loc[config, :].values
     cr = df_cr.loc[config].values
+    f2x = df_co2.loc[config, 'effective_f2x']
     r0 = df_configs.loc[config, 'r0']
     ru = df_configs.loc[config, 'rU']
     rt = df_configs.loc[config, 'rT']
@@ -69,17 +74,34 @@ PARAMETERS
 ** Preferences
         elasmu   Elasticity of marginal utility of consumption         /1.45/
         prstp    Initial rate of social time preference per year       /0.015/
-** Population and technology (updated by CS)
+** Technology and population (updated by CS)
         gama     Capital elasticity in production function             /0.300/
-        popx2    Quadradtic term of population growth 2020-2100        /-15.588/
-        popx1    Linear term of population growth 2020-2100            /436.41/
-        popx0    Intercept of population growth 2020-2100 (millions)   /7393.8/
         dk       Depreciation rate on capital (per year)               /0.100/
         q0       Initial world gross output 2020 (trill 2020 USD)      /133.7/
         k0       Initial capital value 2019                            /318.7/
-        a0       Initial level of total factor productivity            /5.612/
+        a0       Initial level of total factor productivity            /5.611213/
         ga0      Initial growth rate for TFP per 5 years               /0.076/
         dela     Decline rate of TFP per 5 years                       /0.005/
+        l(t)     /1 {pop[0]}, 2 {pop[1]}, 3 {pop[2]}, 4 {pop[3]}, 5 {pop[4]},
+                  6 {pop[5]}, 7 {pop[6]}, 8 {pop[7]}, 9 {pop[8]}, 10 {pop[9]},
+                 11 {pop[10]}, 12 {pop[11]}, 13 {pop[12]}, 14 {pop[13]}, 15 {pop[14]},
+                 16 {pop[15]}, 17 {pop[16]}, 18 {pop[16]}, 19 {pop[16]}, 20 {pop[16]},
+                 21 {pop[16]}, 22 {pop[16]}, 23 {pop[16]}, 24 {pop[16]}, 25 {pop[16]},
+                 26 {pop[16]}, 27 {pop[16]}, 28 {pop[16]}, 29 {pop[16]}, 30 {pop[16]},
+                 31 {pop[16]}, 32 {pop[16]}, 33 {pop[16]}, 34 {pop[16]}, 35 {pop[16]},
+                 36 {pop[16]}, 37 {pop[16]}, 38 {pop[16]}, 39 {pop[16]}, 40 {pop[16]},
+                 41 {pop[16]}, 42 {pop[16]}, 43 {pop[16]}, 44 {pop[16]}, 45 {pop[16]},
+                 46 {pop[16]}, 47 {pop[16]}, 48 {pop[16]}, 49 {pop[16]}, 50 {pop[16]},
+                 51 {pop[16]}, 52 {pop[16]}, 53 {pop[16]}, 54 {pop[16]}, 55 {pop[16]},
+                 56 {pop[16]}, 57 {pop[16]}, 58 {pop[16]}, 59 {pop[16]}, 60 {pop[16]},
+                 61 {pop[16]}, 62 {pop[16]}, 63 {pop[16]}, 64 {pop[16]}, 65 {pop[16]},
+                 66 {pop[16]}, 67 {pop[16]}, 68 {pop[16]}, 69 {pop[16]}, 70 {pop[16]},
+                 71 {pop[16]}, 72 {pop[16]}, 73 {pop[16]}, 74 {pop[16]}, 75 {pop[16]},
+                 76 {pop[16]}, 77 {pop[16]}, 78 {pop[16]}, 79 {pop[16]}, 80 {pop[16]},
+                 81 {pop[16]}, 82 {pop[16]}, 83 {pop[16]}, 84 {pop[16]}, 85 {pop[16]},
+                 86 {pop[16]}, 87 {pop[16]}, 88 {pop[16]}, 89 {pop[16]}, 90 {pop[16]},
+                 91 {pop[16]}, 92 {pop[16]}, 93 {pop[16]}, 94 {pop[16]}, 95 {pop[16]},
+                 96 {pop[16]}, 97 {pop[16]}, 98 {pop[16]}, 99 {pop[16]}, 100 {pop[16]}/
 ** Emissions parameters
         gsigma1  Initial growth of sigma (per year)                    /-0.0152/
         dsig     Decline rate of decarbonization (per period)          /-0.001/
@@ -145,7 +167,7 @@ PARAMETERS
         EBM_B1   Forcing contribution to mixed layer                   /{cr[9]}/
         EBM_B2   Forcing component to ocean layer                      /{cr[10]}/
         EBM_B3   Forcing component to ocean layer                      /{cr[11]}/
-        fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /{cr[12]}/
+        fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /{f2x}/
 ** Climate damage parameters
         a10      Initial damage intercept                              /0/
         a20      Initial damage quadratic term
@@ -206,8 +228,6 @@ PARAMETERS
 * Further definitions of parameters
         a20 = a2;
         sig0 = e0/(q0*(1-miu0));
-        loop(tearly, l(tearly) = popx2*tearly.val**2 + popx1*tearly.val + popx0;);
-        l(tlate) = l("17");
 
         ga(t)=ga0*exp(-dela*5*((t.val-1)));
         al("1") = a0; loop(t, al(t+1)=al(t)/((1-ga(t))););
@@ -278,7 +298,7 @@ EQUATIONS
         CARBPRICEEQ(t)  Carbon price equation from abatement
 
 *Climate and carbon cycle
-        co2eq(t)          Atmospheric concentration equation
+        co2eq(t)         Atmospheric concentration equation
         ATFRACEQ(t)      Atmospheric airborne fraction equation
         T1EQ(t)          Temperature-climate equation for atmosphere + mixed layer
         T2EQ(t)          Temperature-climate equation for mid ocean
@@ -323,7 +343,6 @@ EQUATIONS
  atfraceq(t)..        atfrac(t)      =E= ((co2(t)-co2_1750)/(ccatot(t)+0.0000001));
  iirfeq(t)..          IIRF(t)        =E= r0 + ru * (1-atfrac(t)) * ccatot(t)*3.664 + rt * T1(t) + ra * atfrac(t) * ccatot(t)*3.664;
  alphaeq(t)..         ALPHA(t)       =E= g0 * exp(iirf(t)/g1);
-* cbox4eq(t+1)..       CBOX4(t+1)     =E= a("4")*E(t)*tstep/3.664 + cbox4(t) * exp(-tstep/(alpha(t)*tau("4")));
  cbox1eq(t+1)..       CBOX1(t+1)     =E= a("1")*E(t)/3.664 * alpha(t)*tau("1") * (1 - exp(-tstep/(alpha(t)*tau("1"))))  + cbox1(t) * exp(-tstep/(alpha(t)*tau("1")));
  cbox2eq(t+1)..       CBOX2(t+1)     =E= a("2")*E(t)/3.664 * alpha(t)*tau("2") * (1 - exp(-tstep/(alpha(t)*tau("2"))))  + cbox2(t) * exp(-tstep/(alpha(t)*tau("2")));
  cbox3eq(t+1)..       CBOX3(t+1)     =E= a("3")*E(t)/3.664 * alpha(t)*tau("3") * (1 - exp(-tstep/(alpha(t)*tau("3"))))  + cbox3(t) * exp(-tstep/(alpha(t)*tau("3")));
@@ -335,18 +354,18 @@ EQUATIONS
 * constrainT(t)..     T1(t)          =L= 2;
 
 * Economic variables
- ygrosseq(t)..        YGROSS(t)      =E= (al(t)*(L(t)/1000)**(1-GAMA))*(K(t)**GAMA);
+ ygrosseq(t)..        YGROSS(t)      =E= (al(t)*(L(t))**(1-GAMA))*(K(t)**GAMA);
  yneteq(t)..          YNET(t)        =E= YGROSS(t)*(1-damfrac(t));
  yy(t)..              Y(t)           =E= YNET(t) - ABATECOST(t);
  cc(t)..              C(t)           =E= Y(t) - I(t);
- cpce(t)..            CPC(t)         =E= 1000 * C(t) / L(t);
+ cpce(t)..            CPC(t)         =E= C(t) / L(t);
  seq(t)..             I(t)           =E= S(t) * Y(t);
  kk(t+1)..            K(t+1)         =L= (1-dk)**tstep * K(t) + tstep * I(t);
  rieq(t+1)..          RI(t)          =E= (1+prstp) * (CPC(t+1)/CPC(t))**(elasmu/tstep) - 1;
 
 * Utility
- cemutotpereq(t)..    CEMUTOTPER(t)  =E= PERIODU(t) * L(t) * rr(t);
- periodueq(t)..       PERIODU(t)     =E= ((C(T)*1000/L(T))**(1-elasmu)-1)/(1-elasmu)-1;
+ cemutotpereq(t)..    CEMUTOTPER(t)  =E= PERIODU(t) * L(t)*1000 * rr(t);
+ periodueq(t)..       PERIODU(t)     =E= ((C(T)/L(T))**(1-elasmu)-1)/(1-elasmu)-1;
  util..               UTILITY        =E= tstep * scale1 * sum(t,  CEMUTOTPER(t)) + scale2 ;
 
 * Resource limit
@@ -430,7 +449,7 @@ ppm(t)        = co2.l(t)/{carbon_convert};
 * For ALL relevant model outputs, see 'PutOutputAllT.gms' in the Include folder.
 * The statement at the end of the *.lst file "Output..." will tell you where to find the file.
 
-file results /"{here}/../data_output/dice/{run:04d}.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
+file results /"{here}/../data_output/dice/{config:07d}.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
 put results;
 put // "Period";
 Loop (T, put T.val);
@@ -522,31 +541,31 @@ putclose;
     '''
 
     # write the script
-    with open(os.path.join(here, 'gams_scripts', f'run{run:04d}.gms'), 'w') as f:
+    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.gms'), 'w') as f:
         f.write(template)
 
     # run the command
-    with open(os.path.join(here, 'gams_scripts', f'run{run:04d}.out'), "w") as outfile:
+    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.out'), "w") as outfile:
         subprocess.run(
             [
                 'gams',
                 os.path.join(
                     here,
                     'gams_scripts',
-                    f'run{run:04d}.gms'
+                    f'config{config:07d}.gms'
                 ),
                 '-o',
                 os.path.join(
                     here,
                     'gams_scripts',
-                    f'run{run:04d}.lst'
+                    f'config{config:07d}.lst'
                 ),
             ],
             stdout = outfile,
         )
 
     # were results feasible?
-    with open(os.path.join(here, 'gams_scripts', f'run{run:04d}.lst')) as f:
+    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.lst')) as f:
         output = f.read()
         if " ** Infeasible solution. Reduced gradient less than tolerance." in output:
             raise InfeasibleSolutionError(run)
