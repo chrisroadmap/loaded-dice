@@ -30,7 +30,7 @@ df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs',
 df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'un-population', 'un-median-projections-20220928.csv'), index_col=0)
 pop = df_pop['population_bn'].values
 
-for run, config in tqdm(enumerate(configs[:10])):
+for run, config in tqdm(enumerate(configs[:100])):
     t1 = df_temp.loc[config, 'mixed_layer']
     t2 = df_temp.loc[config, 'mid_ocean']
     t3 = df_temp.loc[config, 'deep_ocean']
@@ -110,7 +110,7 @@ PARAMETERS
         deland   Decline rate of land emissions (per period)           /0.115/
         e0       Industrial emissions 2020 (GtCO2 per year)            /37.39/
 * projections from RCMIP (should use GCP; TODO)
-        miu0     Initial emissions control rate for base case 2015     /0.0/
+        miu0     Initial emissions control rate for base case 2020     /0.15/
 * Initial Conditions
         co2_2020 Initial concentration in atmosphere 2020 (GtC)        /{co2_2020*carbon_convert}/
         co2_1750 Pre-industrial concentration atmosphere  (GtC)        /{co2_1750*carbon_convert}/
@@ -215,8 +215,8 @@ PARAMETERS
 * Program control definitions
         tfirst(t) = yes$(t.val eq 1);
         tlast(t)  = yes$(t.val eq card(t));
-        tearly(t) = yes$(t.val le 17);
-        tlate(t)  = yes$(t.val gt 17);
+        tearly(t) = yes$(t.val le 16);
+        tlate(t)  = yes$(t.val gt 16);
 * Parameters for carbon cycle
         g1 = sum(box,
                 a(box) * tau(box) *
@@ -374,7 +374,7 @@ CCA.lo(t)             = 0;
 
 * Control rate limits
 MIU.up(t)             = limmiu;
-MIU.up(t)$(t.val<30)  = 1;
+MIU.up(t)$(t.val<8)   = 1;
 
 ** Upper and lower bounds for stability
 K.LO(t)         = 1;

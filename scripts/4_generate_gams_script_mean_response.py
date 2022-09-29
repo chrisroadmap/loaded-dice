@@ -1,10 +1,7 @@
-# TODO: change cumulative emissions to SSP126
+"""Generate a GAMS script for the mean climate response, for testing."""
 
-import json
 import os
-import subprocess
 
-from tqdm import tqdm
 import pandas as pd
 
 # should really import these constants from FaIR
@@ -15,40 +12,33 @@ here = os.path.dirname(os.path.realpath(__file__))
 df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
 configs = df_configs.index
 
-os.makedirs(os.path.join(here, 'gams_scripts'), exist_ok=True)
-os.makedirs(os.path.join(here, '..', 'data_output', 'dice_below2deg'), exist_ok=True)
-
-df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_ssp126.csv'), index_col=0)
-df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'gas_partitions_ssp126.csv'), index_col=0)
+df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_ssp245.csv'), index_col=0)
+df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'gas_partitions_ssp245.csv'), index_col=0)
 df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'climate_response_params.csv'), index_col=0)
-df_co2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'co2_forcing_ssp126.csv'), index_col=0)
-df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp126.csv'), index_col=0)
+df_co2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'co2_forcing_ssp245.csv'), index_col=0)
+df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp245.csv'), index_col=0)
 
 df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'un-population', 'un-median-projections-20220928.csv'), index_col=0)
 pop = df_pop['population_bn'].values
 
-infeas = 0
-n_configs = 100
+t1 = df_temp['mixed_layer'].mean()
+t2 = df_temp['mid_ocean'].mean()
+t3 = df_temp['deep_ocean'].mean()
+nonco2 = df_nonco2.mean(axis=0)
+cr = df_cr.mean(axis=0)
+f2x = df_co2['effective_f2x'].mean()
+r0 = df_configs['r0'].mean()
+ru = df_configs['rU'].mean()
+rt = df_configs['rT'].mean()
+ra = df_configs['rA'].mean()
+cbox1 = df_cbox['geological'].mean()
+cbox2 = df_cbox['slow'].mean()
+cbox3 = df_cbox['mid'].mean()
+cbox4 = df_cbox['fast'].mean()
+co2_2020 = df_cbox['co2_2020'].mean()
+co2_1750 = df_configs['co2_concentration_1750'].mean()
 
-for run, config in tqdm(enumerate(configs[:n_configs])):
-    t1 = df_temp.loc[config, 'mixed_layer']
-    t2 = df_temp.loc[config, 'mid_ocean']
-    t3 = df_temp.loc[config, 'deep_ocean']
-    nonco2 = df_nonco2.loc[config, :].values
-    cr = df_cr.loc[config].values
-    f2x = df_co2.loc[config, 'effective_f2x']
-    r0 = df_configs.loc[config, 'r0']
-    ru = df_configs.loc[config, 'rU']
-    rt = df_configs.loc[config, 'rT']
-    ra = df_configs.loc[config, 'rA']
-    cbox1 = df_cbox.loc[config, 'geological']
-    cbox2 = df_cbox.loc[config, 'slow']
-    cbox3 = df_cbox.loc[config, 'mid']
-    cbox4 = df_cbox.loc[config, 'fast']
-    co2_2020 = df_cbox.loc[config, 'co2_2020']
-    co2_1750 = df_configs.loc[config, 'co2_concentration_1750']
-
-    template = f'''
+template = f'''
 $ontext
 DICE with FaIR carbon cycle and climate response.
 
@@ -110,7 +100,7 @@ PARAMETERS
         deland   Decline rate of land emissions (per period)           /0.115/
         e0       Industrial emissions 2020 (GtCO2 per year)            /37.39/
 * projections from RCMIP (should use GCP; TODO)
-        miu0     Initial emissions control rate for base case 2020     /0.15/
+        miu0     Initial emissions control rate for base case 2015     /0.0/
 * Initial Conditions
         co2_2020 Initial concentration in atmosphere 2020 (GtC)        /{co2_2020*carbon_convert}/
         co2_1750 Pre-industrial concentration atmosphere  (GtC)        /{co2_1750*carbon_convert}/
@@ -215,8 +205,8 @@ PARAMETERS
 * Program control definitions
         tfirst(t) = yes$(t.val eq 1);
         tlast(t)  = yes$(t.val eq card(t));
-        tearly(t) = yes$(t.val le 16);
-        tlate(t)  = yes$(t.val gt 16);
+        tearly(t) = yes$(t.val le 17);
+        tlate(t)  = yes$(t.val gt 17);
 * Parameters for carbon cycle
         g1 = sum(box,
                 a(box) * tau(box) *
@@ -309,7 +299,7 @@ EQUATIONS
         CBOX2EQ(t)       Carbon box 2 equation
         CBOX3EQ(t)       Carbon box 3 equation
         CBOX4EQ(t)       Carbon box 4 equation
-        constrainT       limit warming to 2 degrees
+*constrainT  if we want to e.g. limit warming to 2 degrees
 
 *Economic variables
         YGROSSEQ(t)      Output gross equation
@@ -351,7 +341,7 @@ EQUATIONS
  t2eq(t+1)..          T2(t+1)        =E= EBM_A21 * T1(t) + EBM_A22 * T2(t) + EBM_A23 * T3(t) + EBM_B2 * FORC(t);
  t3eq(t+1)..          T3(t+1)        =E= EBM_A31 * T1(t) + EBM_A32 * T2(t) + EBM_A33 * T3(t) + EBM_B3 * FORC(t);
  co2eq(t)..           co2(t)         =E= co2_1750 + cbox1(t) + cbox2(t) + cbox3(t) + cbox4(t);
- constrainT(t)..      T1(t)          =L= 2;
+* constrainT(t)..     T1(t)          =L= 2;
 
 * Economic variables
  ygrosseq(t)..        YGROSS(t)      =E= (al(t)*(L(t))**(1-GAMA))*(K(t)**GAMA);
@@ -374,7 +364,7 @@ CCA.lo(t)             = 0;
 
 * Control rate limits
 MIU.up(t)             = limmiu;
-MIU.up(t)$(t.val<8)  = 1;
+MIU.up(t)$(t.val<30)  = 1;
 
 ** Upper and lower bounds for stability
 K.LO(t)         = 1;
@@ -449,7 +439,7 @@ ppm(t)        = co2.l(t)/{carbon_convert};
 * For ALL relevant model outputs, see 'PutOutputAllT.gms' in the Include folder.
 * The statement at the end of the *.lst file "Output..." will tell you where to find the file.
 
-file results /"{here}/../data_output/dice_below2deg/{config:07d}.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
+file results /"mean_config.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
 put results;
 put // "Period";
 Loop (T, put T.val);
@@ -538,41 +528,8 @@ Loop (T, put cbox4.l(t));
 put / "Objective" ;
 put utility.l;
 putclose;
-    '''
+'''
 
-    # write the script
-    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.gms'), 'w') as f:
-        f.write(template)
-
-    # run the command
-    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.out'), "w") as outfile:
-        subprocess.run(
-            [
-                'gams',
-                os.path.join(
-                    here,
-                    'gams_scripts',
-                    f'config{config:07d}.gms'
-                ),
-                '-o',
-                os.path.join(
-                    here,
-                    'gams_scripts',
-                    f'config{config:07d}.lst'
-                ),
-            ],
-            stdout = outfile,
-        )
-
-
-    # were results feasible?
-    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.lst')) as f:
-        output = f.read()
-        if " ** Infeasible solution. Reduced gradient less than tolerance." in output:
-            # don't raise an error but keep a tally
-            infeas = infeas + 1
-
-            # delete output csv as nonsense
-            os.remove(os.path.join(here, '..', 'data_output', 'dice_below2deg', f'{config:07d}.csv'))
-
-print(f'{infeas} out of {n_configs} were infeasible')
+# write the script
+with open(os.path.join(here, 'mean_config.gms'), 'w') as f:
+    f.write(template)

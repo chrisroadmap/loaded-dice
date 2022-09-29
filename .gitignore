@@ -4,10 +4,11 @@ Thumbs.db
 
 # GAMS testing
 *.lst
+*.lxi
 *.out
+*.put
 scripts/*.csv
 scripts/*.*log*
-*.put
 
 # GAMS working files
 225a/

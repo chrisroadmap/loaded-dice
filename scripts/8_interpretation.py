@@ -54,11 +54,11 @@ for scenario in ['dice', 'dice_1p5deglowOS', 'dice_below2deg']:
         except:
             pass
 
-    print(np.nanpercentile(outputs['E'][17, :], (5, 50, 95)))  # CO2 fossil emissions 2100
-    print(np.nanpercentile(outputs['SCC'][1, :], (5, 50, 95))) # social cost of carbon 2020
-    print(np.nanpercentile(outputs['T'][17, :], (5, 50, 95)))  # temperature 2100
-    print(np.nanpercentile(np.max(outputs['T'], axis=0), (5, 50, 95)))  # peak temperature
-    print(np.nanpercentile(outputs['F'][17, :], (5, 50, 95)))  # radiative forcing 2100
+    print('emissions   2100', np.nanpercentile(outputs['E'][16, :], (5, 50, 95)))  # CO2 fossil emissions 2100
+    print('SCC         2020', np.nanpercentile(outputs['SCC'][0, :], (5, 50, 95))) # social cost of carbon 2020
+    print('temperature 2100', np.nanpercentile(outputs['T'][16, :], (5, 50, 95)))  # temperature 2100
+    print('temperature peak', np.nanpercentile(np.max(outputs['T'], axis=0), (5, 50, 95)))  # peak temperature
+    print('forcing     2100', np.nanpercentile(outputs['F'][16, :], (5, 50, 95)))  # radiative forcing 2100
 
     fig, ax = pl.subplots(2,2)
 
@@ -66,7 +66,7 @@ for scenario in ['dice', 'dice_1p5deglowOS', 'dice_below2deg']:
         'E': 'GtCO$_2$ yr$^{-1}$',
         'CO2': 'ppm',
         'T': '°C relative to 1850-1900',
-        'SCC': '\$(2005) tCO$_2^{-1}$'
+        'SCC': '\$(2020) tCO$_2^{-1}$'
     }
     title = {
         'E': 'CO$_2$ fossil emissions',

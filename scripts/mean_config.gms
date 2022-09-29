@@ -1,54 +1,4 @@
-# TODO: change cumulative emissions to SSP126
 
-import json
-import os
-import subprocess
-
-from tqdm import tqdm
-import pandas as pd
-
-# should really import these constants from FaIR
-carbon_convert = 5.1352 * 12.011 / 28.97
-
-here = os.path.dirname(os.path.realpath(__file__))
-
-df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
-configs = df_configs.index
-
-os.makedirs(os.path.join(here, 'gams_scripts'), exist_ok=True)
-os.makedirs(os.path.join(here, '..', 'data_output', 'dice_below2deg'), exist_ok=True)
-
-df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_ssp126.csv'), index_col=0)
-df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'gas_partitions_ssp126.csv'), index_col=0)
-df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'climate_response_params.csv'), index_col=0)
-df_co2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'co2_forcing_ssp126.csv'), index_col=0)
-df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp126.csv'), index_col=0)
-
-df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'un-population', 'un-median-projections-20220928.csv'), index_col=0)
-pop = df_pop['population_bn'].values
-
-infeas = 0
-n_configs = 100
-
-for run, config in tqdm(enumerate(configs[:n_configs])):
-    t1 = df_temp.loc[config, 'mixed_layer']
-    t2 = df_temp.loc[config, 'mid_ocean']
-    t3 = df_temp.loc[config, 'deep_ocean']
-    nonco2 = df_nonco2.loc[config, :].values
-    cr = df_cr.loc[config].values
-    f2x = df_co2.loc[config, 'effective_f2x']
-    r0 = df_configs.loc[config, 'r0']
-    ru = df_configs.loc[config, 'rU']
-    rt = df_configs.loc[config, 'rT']
-    ra = df_configs.loc[config, 'rA']
-    cbox1 = df_cbox.loc[config, 'geological']
-    cbox2 = df_cbox.loc[config, 'slow']
-    cbox3 = df_cbox.loc[config, 'mid']
-    cbox4 = df_cbox.loc[config, 'fast']
-    co2_2020 = df_cbox.loc[config, 'co2_2020']
-    co2_1750 = df_configs.loc[config, 'co2_concentration_1750']
-
-    template = f'''
 $ontext
 DICE with FaIR carbon cycle and climate response.
 
@@ -82,26 +32,26 @@ PARAMETERS
         a0       Initial level of total factor productivity            /5.611213/
         ga0      Initial growth rate for TFP per 5 years               /0.076/
         dela     Decline rate of TFP per 5 years                       /0.005/
-        l(t)     /1 {pop[0]}, 2 {pop[1]}, 3 {pop[2]}, 4 {pop[3]}, 5 {pop[4]},
-                  6 {pop[5]}, 7 {pop[6]}, 8 {pop[7]}, 9 {pop[8]}, 10 {pop[9]},
-                 11 {pop[10]}, 12 {pop[11]}, 13 {pop[12]}, 14 {pop[13]}, 15 {pop[14]},
-                 16 {pop[15]}, 17 {pop[16]}, 18 {pop[16]}, 19 {pop[16]}, 20 {pop[16]},
-                 21 {pop[16]}, 22 {pop[16]}, 23 {pop[16]}, 24 {pop[16]}, 25 {pop[16]},
-                 26 {pop[16]}, 27 {pop[16]}, 28 {pop[16]}, 29 {pop[16]}, 30 {pop[16]},
-                 31 {pop[16]}, 32 {pop[16]}, 33 {pop[16]}, 34 {pop[16]}, 35 {pop[16]},
-                 36 {pop[16]}, 37 {pop[16]}, 38 {pop[16]}, 39 {pop[16]}, 40 {pop[16]},
-                 41 {pop[16]}, 42 {pop[16]}, 43 {pop[16]}, 44 {pop[16]}, 45 {pop[16]},
-                 46 {pop[16]}, 47 {pop[16]}, 48 {pop[16]}, 49 {pop[16]}, 50 {pop[16]},
-                 51 {pop[16]}, 52 {pop[16]}, 53 {pop[16]}, 54 {pop[16]}, 55 {pop[16]},
-                 56 {pop[16]}, 57 {pop[16]}, 58 {pop[16]}, 59 {pop[16]}, 60 {pop[16]},
-                 61 {pop[16]}, 62 {pop[16]}, 63 {pop[16]}, 64 {pop[16]}, 65 {pop[16]},
-                 66 {pop[16]}, 67 {pop[16]}, 68 {pop[16]}, 69 {pop[16]}, 70 {pop[16]},
-                 71 {pop[16]}, 72 {pop[16]}, 73 {pop[16]}, 74 {pop[16]}, 75 {pop[16]},
-                 76 {pop[16]}, 77 {pop[16]}, 78 {pop[16]}, 79 {pop[16]}, 80 {pop[16]},
-                 81 {pop[16]}, 82 {pop[16]}, 83 {pop[16]}, 84 {pop[16]}, 85 {pop[16]},
-                 86 {pop[16]}, 87 {pop[16]}, 88 {pop[16]}, 89 {pop[16]}, 90 {pop[16]},
-                 91 {pop[16]}, 92 {pop[16]}, 93 {pop[16]}, 94 {pop[16]}, 95 {pop[16]},
-                 96 {pop[16]}, 97 {pop[16]}, 98 {pop[16]}, 99 {pop[16]}, 100 {pop[16]}/
+        l(t)     /1 7.841, 2 8.192, 3 8.546, 4 8.879, 5 9.188,
+                  6 9.468, 7 9.709, 8 9.908, 9 10.068, 10 10.196,
+                 11 10.297, 12 10.371, 13 10.415, 14 10.431, 15 10.424,
+                 16 10.396, 17 10.349, 18 10.349, 19 10.349, 20 10.349,
+                 21 10.349, 22 10.349, 23 10.349, 24 10.349, 25 10.349,
+                 26 10.349, 27 10.349, 28 10.349, 29 10.349, 30 10.349,
+                 31 10.349, 32 10.349, 33 10.349, 34 10.349, 35 10.349,
+                 36 10.349, 37 10.349, 38 10.349, 39 10.349, 40 10.349,
+                 41 10.349, 42 10.349, 43 10.349, 44 10.349, 45 10.349,
+                 46 10.349, 47 10.349, 48 10.349, 49 10.349, 50 10.349,
+                 51 10.349, 52 10.349, 53 10.349, 54 10.349, 55 10.349,
+                 56 10.349, 57 10.349, 58 10.349, 59 10.349, 60 10.349,
+                 61 10.349, 62 10.349, 63 10.349, 64 10.349, 65 10.349,
+                 66 10.349, 67 10.349, 68 10.349, 69 10.349, 70 10.349,
+                 71 10.349, 72 10.349, 73 10.349, 74 10.349, 75 10.349,
+                 76 10.349, 77 10.349, 78 10.349, 79 10.349, 80 10.349,
+                 81 10.349, 82 10.349, 83 10.349, 84 10.349, 85 10.349,
+                 86 10.349, 87 10.349, 88 10.349, 89 10.349, 90 10.349,
+                 91 10.349, 92 10.349, 93 10.349, 94 10.349, 95 10.349,
+                 96 10.349, 97 10.349, 98 10.349, 99 10.349, 100 10.349/
 ** Emissions parameters
         gsigma1  Initial growth of sigma (per year)                    /-0.0152/
         dsig     Decline rate of decarbonization (per period)          /-0.001/
@@ -110,64 +60,64 @@ PARAMETERS
         deland   Decline rate of land emissions (per period)           /0.115/
         e0       Industrial emissions 2020 (GtCO2 per year)            /37.39/
 * projections from RCMIP (should use GCP; TODO)
-        miu0     Initial emissions control rate for base case 2020     /0.15/
+        miu0     Initial emissions control rate for base case 2015     /0.15/
 * Initial Conditions
-        co2_2020 Initial concentration in atmosphere 2020 (GtC)        /{co2_2020*carbon_convert}/
-        co2_1750 Pre-industrial concentration atmosphere  (GtC)        /{co2_1750*carbon_convert}/
+        co2_2020 Initial concentration in atmosphere 2020 (GtC)        /877.7506903923256/
+        co2_1750 Pre-industrial concentration atmosphere  (GtC)        /591.9851790277355/
 * These are for declaration and are defined later
         sig0     Carbon intensity 2010 (kgCO2 per output 2005 USD 2010)
 ** Climate model parameters
         g0       Carbon cycle parameter (Leach et al. 2021)
         g1       Carbon cycle parameter (Leach et al. 2021)
-        r0       Pre-industrial time-integrated airborne fraction      /{r0}/
-        ru       Sensitivity of airborne fraction with CO2 uptake      /{ru}/
-        rt       Sensitivity of airborne fraction with temperature     /{rt}/
-        ra       Sensitivity of airborne fraction with CO2 airborne    /{ra}/
+        r0       Pre-industrial time-integrated airborne fraction      /33.707991262815256/
+        ru       Sensitivity of airborne fraction with CO2 uptake      /0.003426378858380945/
+        rt       Sensitivity of airborne fraction with temperature     /2.3665473196484275/
+        ra       Sensitivity of airborne fraction with CO2 airborne    /0.0016877120877617834/
         tau(box) Lifetimes of the four atmospheric carbon boxes
                      / 1 1e9, 2 394.4, 3 36.54, 4 4.304 /
         a(box)   Partition fraction of the four atmospheric carbon boxes
                      / 1 0.2173, 2 0.2240, 3 0.2824, 4 0.2763 /
-        ICBOX1   Initial GtC concentration of carbon box 1 in 2020     /{cbox1}/
-        ICBOX2   Initial GtC concentration of carbon box 2 in 2020     /{cbox2}/
-        ICBOX3   Initial GtC concentration of carbon box 3 in 2020     /{cbox3}/
-        ICBOX4   Initial GtC concentration of carbon box 4 in 2020     /{cbox4}/
-        forcoth(t) /1 {nonco2[0]}, 2 {nonco2[1]}, 3 {nonco2[2]}, 4 {nonco2[3]}, 5 {nonco2[4]},
-                  6 {nonco2[5]}, 7 {nonco2[6]}, 8 {nonco2[7]}, 9 {nonco2[8]}, 10 {nonco2[9]},
-                  11 {nonco2[10]}, 12 {nonco2[11]}, 13 {nonco2[12]}, 14 {nonco2[13]}, 15 {nonco2[14]},
-                  16 {nonco2[15]}, 17 {nonco2[16]}, 18 {nonco2[17]}, 19 {nonco2[18]}, 20 {nonco2[19]},
-                  21 {nonco2[20]}, 22 {nonco2[21]}, 23 {nonco2[22]}, 24 {nonco2[23]}, 25 {nonco2[24]},
-                  26 {nonco2[25]}, 27 {nonco2[26]}, 28 {nonco2[27]}, 29 {nonco2[28]}, 30 {nonco2[29]},
-                  31 {nonco2[30]}, 32 {nonco2[31]}, 33 {nonco2[32]}, 34 {nonco2[33]}, 35 {nonco2[34]},
-                  36 {nonco2[35]}, 37 {nonco2[36]}, 38 {nonco2[37]}, 39 {nonco2[38]}, 40 {nonco2[39]},
-                  41 {nonco2[40]}, 42 {nonco2[41]}, 43 {nonco2[42]}, 44 {nonco2[43]}, 45 {nonco2[44]},
-                  46 {nonco2[45]}, 47 {nonco2[46]}, 48 {nonco2[47]}, 49 {nonco2[48]}, 50 {nonco2[49]},
-                  51 {nonco2[50]}, 52 {nonco2[51]}, 53 {nonco2[52]}, 54 {nonco2[53]}, 55 {nonco2[54]},
-                  56 {nonco2[55]}, 57 {nonco2[56]}, 58 {nonco2[57]}, 59 {nonco2[58]}, 60 {nonco2[59]},
-                  61 {nonco2[60]}, 62 {nonco2[61]}, 63 {nonco2[62]}, 64 {nonco2[63]}, 65 {nonco2[64]},
-                  66 {nonco2[65]}, 67 {nonco2[66]}, 68 {nonco2[67]}, 69 {nonco2[68]}, 70 {nonco2[69]},
-                  71 {nonco2[70]}, 72 {nonco2[71]}, 73 {nonco2[72]}, 74 {nonco2[73]}, 75 {nonco2[74]},
-                  76 {nonco2[75]}, 77 {nonco2[76]}, 78 {nonco2[77]}, 79 {nonco2[78]}, 80 {nonco2[79]},
-                  81 {nonco2[80]}, 82 {nonco2[81]}, 83 {nonco2[82]}, 84 {nonco2[83]}, 85 {nonco2[84]},
-                  86 {nonco2[85]}, 87 {nonco2[86]}, 88 {nonco2[87]}, 89 {nonco2[88]}, 90 {nonco2[89]},
-                  91 {nonco2[90]}, 92 {nonco2[91]}, 93 {nonco2[92]}, 94 {nonco2[93]}, 95 {nonco2[94]},
-                  96 {nonco2[95]}, 97 {nonco2[96]}, 98 {nonco2[96]}, 99 {nonco2[96]}, 100 {nonco2[96]}/
+        ICBOX1   Initial GtC concentration of carbon box 1 in 2020     /142.1996841047318/
+        ICBOX2   Initial GtC concentration of carbon box 2 in 2020     /101.91437137185964/
+        ICBOX3   Initial GtC concentration of carbon box 3 in 2020     /36.33826798571535/
+        ICBOX4   Initial GtC concentration of carbon box 4 in 2020     /5.313187902283237/
+        forcoth(t) /1 0.5631469122927542, 2 0.6422292943652496, 3 0.661946970514596, 4 0.7044808856224392, 5 0.7522164705785052,
+                  6 0.7947602927942079, 7 0.8344956087378478, 8 0.8614734083861176, 9 0.8719908786698031, 10 0.8823072394406338,
+                  11 0.8951261860906241, 12 0.9115289900878462, 13 0.9307951035025847, 14 0.9527842390594017, 15 0.9799684539049378,
+                  16 1.0043017281922475, 17 1.0192824323382572, 18 1.0258938520287828, 19 1.017170237108112, 20 1.0068817424716487,
+                  21 0.9952301356488665, 22 0.9824185375169568, 23 0.9686017443646333, 24 0.9538956007792325, 25 0.9383874472340076,
+                  26 0.9221440138916518, 27 0.9052171060647392, 28 0.8876498746642962, 29 0.8697640931258807, 30 0.8520151187134513,
+                  31 0.8344259795604098, 32 0.8170160838042406, 33 0.7998015204716901, 34 0.7827960001579852, 35 0.7660115579259056,
+                  36 0.7494590606783875, 37 0.7331485813356123, 38 0.7170896827078996, 39 0.7012916399378516, 40 0.6857636211995377,
+                  41 0.670514840297038, 42 0.6555546908170432, 43 0.6408928688586393, 44 0.6265394896597792, 45 0.6125052023641522,
+                  46 0.5988013065463741, 47 0.5854398738126955, 48 0.5717236817838456, 49 0.5587524241611077, 50 0.5493578070017324,
+                  51 0.5422524946691663, 52 0.5366550067765409, 53 0.5320815321898753, 54 0.5282287420908791, 55 0.524903396879524,
+                  56 0.521979739650002, 57 0.5193736998910495, 58 0.5170272500375537, 59 0.5148988839240056, 60 0.512957786877885,
+                  61 0.5111802357867915, 62 0.5095473505822982, 63 0.5080436686738117, 64 0.5066562238554428, 65 0.5053739371978738,
+                  66 0.5041872031154992, 67 0.5030875993436238, 68 0.5020676770420053, 69 0.5011208038803758, 70 0.5002410430808709,
+                  71 0.4994230575814242, 72 0.49866203229714434, 73 0.49795360982772763, 74 0.4972938364508436, 75 0.49667911619406885,
+                  76 0.49610617139739555, 77 0.4955720085898176, 78 0.4950738887837308, 79 0.49460930148690124, 80 0.494175941872881,
+                  81 0.49377169065521476, 82 0.4933945962902292, 83 0.49304285919509827, 84 0.49271481771710285, 85 0.4924089356298586,
+                  86 0.4921237909650147, 87 0.4918580660151024, 88 0.49161053836597557, 89 0.4913800728365212, 90 0.4911656142196126,
+                  91 0.4909661807321938, 92 0.49078085809427996, 93 0.49060879416685854, 94 0.4904491940874881, 95 0.490301315849935,
+                  96 0.4901644662807643, 97 0.49003799737146353, 98 0.49003799737146353, 99 0.49003799737146353, 100 0.49003799737146353/
         iirf_horizon Time horizon for IIRF in yr                       /100/
-        t1_0     three-layer "mixed layer" temperature change          /{t1}/
-        t2_0     three-layer "mid-ocean" temperature change            /{t2}/
-        t3_0     three-layer "deep-ocean" temperature change           /{t3}/
-        EBM_A11  Fast component of mixed layer temperature             /{cr[0]}/
-        EBM_A12  Intermediate component of mixed layer temperature     /{cr[1]}/
-        EBM_A13  Slow component of mixed layer temperature             /{cr[2]}/
-        EBM_A21  Fast component of mid ocean temperature               /{cr[3]}/
-        EBM_A22  Intermediate component of mid ocean temperature       /{cr[4]}/
-        EBM_A23  Slow component of mid ocean temperature               /{cr[5]}/
-        EBM_A31  Fast component of deep ocean temperature              /{cr[6]}/
-        EBM_A32  Intermediate component of deep ocean temperature      /{cr[7]}/
-        EBM_A33  Slow component of deep ocean temperature              /{cr[8]}/
-        EBM_B1   Forcing contribution to mixed layer                   /{cr[9]}/
-        EBM_B2   Forcing component to ocean layer                      /{cr[10]}/
-        EBM_B3   Forcing component to ocean layer                      /{cr[11]}/
-        fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /{f2x}/
+        t1_0     three-layer "mixed layer" temperature change          /1.2366216923149613/
+        t2_0     three-layer "mid-ocean" temperature change            /0.8388796534034393/
+        t3_0     three-layer "deep-ocean" temperature change           /0.28067369406410175/
+        EBM_A11  Fast component of mixed layer temperature             /0.07790134885533427/
+        EBM_A12  Intermediate component of mixed layer temperature     /0.36529270554362925/
+        EBM_A13  Slow component of mixed layer temperature             /0.13965825404191443/
+        EBM_A21  Fast component of mid ocean temperature               /0.08189096365651416/
+        EBM_A22  Intermediate component of mid ocean temperature       /0.528413520955148/
+        EBM_A23  Slow component of mid ocean temperature               /0.2365989107612785/
+        EBM_A31  Fast component of deep ocean temperature              /0.008316076511537767/
+        EBM_A32  Intermediate component of deep ocean temperature      /0.07334669905622317/
+        EBM_A33  Slow component of deep ocean temperature              /0.9109931044425426/
+        EBM_B1   Forcing contribution to mixed layer                   /0.3161368340237162/
+        EBM_B2   Forcing component to ocean layer                      /0.11763985620815468/
+        EBM_B3   Forcing component to ocean layer                      /0.005519163787478726/
+        fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /3.863404946571311/
 ** Climate damage parameters
         a10      Initial damage intercept                              /0/
         a20      Initial damage quadratic term
@@ -179,7 +129,7 @@ PARAMETERS
         pback     Cost of backstop 2010$ per tCO2 2015                 /550/
         gback     Initial cost decline backstop cost per period        /.025/
         limmiu    Upper limit on control rate after 2150               /1.2/
-        tnopol    Period before which no emissions controls base       /45/
+        tnopol    Period before which no emissions controls base       /15/
         cprice0   Initial base carbon price (2010$ per tCO2)           /2/
         gcprice   Growth rate of base carbon price per year            /.02/
 
@@ -215,8 +165,8 @@ PARAMETERS
 * Program control definitions
         tfirst(t) = yes$(t.val eq 1);
         tlast(t)  = yes$(t.val eq card(t));
-        tearly(t) = yes$(t.val le 16);
-        tlate(t)  = yes$(t.val gt 16);
+        tearly(t) = yes$(t.val le 17);
+        tlate(t)  = yes$(t.val gt 17);
 * Parameters for carbon cycle
         g1 = sum(box,
                 a(box) * tau(box) *
@@ -309,7 +259,7 @@ EQUATIONS
         CBOX2EQ(t)       Carbon box 2 equation
         CBOX3EQ(t)       Carbon box 3 equation
         CBOX4EQ(t)       Carbon box 4 equation
-        constrainT       limit warming to 2 degrees
+*constrainT  if we want to e.g. limit warming to 2 degrees
 
 *Economic variables
         YGROSSEQ(t)      Output gross equation
@@ -351,7 +301,7 @@ EQUATIONS
  t2eq(t+1)..          T2(t+1)        =E= EBM_A21 * T1(t) + EBM_A22 * T2(t) + EBM_A23 * T3(t) + EBM_B2 * FORC(t);
  t3eq(t+1)..          T3(t+1)        =E= EBM_A31 * T1(t) + EBM_A32 * T2(t) + EBM_A33 * T3(t) + EBM_B3 * FORC(t);
  co2eq(t)..           co2(t)         =E= co2_1750 + cbox1(t) + cbox2(t) + cbox3(t) + cbox4(t);
- constrainT(t)..      T1(t)          =L= 2;
+* constrainT(t)..     T1(t)          =L= 2;
 
 * Economic variables
  ygrosseq(t)..        YGROSS(t)      =E= (al(t)*(L(t))**(1-GAMA))*(K(t)**GAMA);
@@ -374,7 +324,7 @@ CCA.lo(t)             = 0;
 
 * Control rate limits
 MIU.up(t)             = limmiu;
-MIU.up(t)$(t.val<8)  = 1;
+MIU.up(t)$(t.val<7)  = 1;
 
 ** Upper and lower bounds for stability
 K.LO(t)         = 1;
@@ -443,13 +393,13 @@ solve DICE maximizing utility using nlp;
 ** POST-SOLVE
 * Calculate social cost of carbon and other variables
 scc(t)        = -1000*eeq.m(t)/(.00001+cc.m(t));
-ppm(t)        = co2.l(t)/{carbon_convert};
+ppm(t)        = co2.l(t)/2.1290606558508802;
 
 * Produces a file "Dice2016R-091916ap.csv" in the base directory
 * For ALL relevant model outputs, see 'PutOutputAllT.gms' in the Include folder.
 * The statement at the end of the *.lst file "Output..." will tell you where to find the file.
 
-file results /"{here}/../data_output/dice_below2deg/{config:07d}.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
+file results /"mean_config.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
 put results;
 put // "Period";
 Loop (T, put T.val);
@@ -538,41 +488,3 @@ Loop (T, put cbox4.l(t));
 put / "Objective" ;
 put utility.l;
 putclose;
-    '''
-
-    # write the script
-    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.gms'), 'w') as f:
-        f.write(template)
-
-    # run the command
-    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.out'), "w") as outfile:
-        subprocess.run(
-            [
-                'gams',
-                os.path.join(
-                    here,
-                    'gams_scripts',
-                    f'config{config:07d}.gms'
-                ),
-                '-o',
-                os.path.join(
-                    here,
-                    'gams_scripts',
-                    f'config{config:07d}.lst'
-                ),
-            ],
-            stdout = outfile,
-        )
-
-
-    # were results feasible?
-    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.lst')) as f:
-        output = f.read()
-        if " ** Infeasible solution. Reduced gradient less than tolerance." in output:
-            # don't raise an error but keep a tally
-            infeas = infeas + 1
-
-            # delete output csv as nonsense
-            os.remove(os.path.join(here, '..', 'data_output', 'dice_below2deg', f'{config:07d}.csv'))
-
-print(f'{infeas} out of {n_configs} were infeasible')
