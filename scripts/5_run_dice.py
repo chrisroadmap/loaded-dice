@@ -8,7 +8,6 @@ import pandas as pd
 # should really import these constants from FaIR
 carbon_convert = 5.1352 * 12.011 / 28.97
 
-
 class InfeasibleSolutionError(Exception):
     def __init__(self, run):
         print(f"Infeasible solution in run number {run}.")
@@ -30,7 +29,9 @@ df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs',
 df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'un-population', 'un-median-projections-20220928.csv'), index_col=0)
 pop = df_pop['population_bn'].values
 
-for run, config in tqdm(enumerate(configs[:100])):
+n_configs = 1001
+
+for run, config in tqdm(enumerate(configs[:n_configs])):
     t1 = df_temp.loc[config, 'mixed_layer']
     t2 = df_temp.loc[config, 'mid_ocean']
     t3 = df_temp.loc[config, 'deep_ocean']
@@ -176,7 +177,7 @@ PARAMETERS
         a3       Damage exponent                                       /2.00/
 ** Abatement cost
         expcost2  Exponent of control cost function                    /2.6/
-        pback     Cost of backstop 2010$ per tCO2 2015                 /550/
+        pback     Cost of backstop 2010$ per tCO2 2015                 /679/
         gback     Initial cost decline backstop cost per period        /.025/
         limmiu    Upper limit on control rate after 2150               /1.2/
         tnopol    Period before which no emissions controls base       /45/

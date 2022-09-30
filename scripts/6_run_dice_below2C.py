@@ -28,7 +28,7 @@ df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'un-population', 'un
 pop = df_pop['population_bn'].values
 
 infeas = 0
-n_configs = 100
+n_configs = 1001
 
 for run, config in tqdm(enumerate(configs[:n_configs])):
     t1 = df_temp.loc[config, 'mixed_layer']
@@ -176,7 +176,7 @@ PARAMETERS
         a3       Damage exponent                                       /2.00/
 ** Abatement cost
         expcost2  Exponent of control cost function                    /2.6/
-        pback     Cost of backstop 2010$ per tCO2 2015                 /550/
+        pback     Cost of backstop 2010$ per tCO2 2015                 /679/
         gback     Initial cost decline backstop cost per period        /.025/
         limmiu    Upper limit on control rate after 2150               /1.2/
         tnopol    Period before which no emissions controls base       /45/
@@ -568,11 +568,19 @@ putclose;
     # were results feasible?
     with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.lst')) as f:
         output = f.read()
-        if " ** Infeasible solution. Reduced gradient less than tolerance." in output:
-            # don't raise an error but keep a tally
+        fail_1 = " ** Infeasible solution. Reduced gradient less than tolerance." in output
+        last_infeasible_mention = output.rfind("INFEASIBLE")
+        n_infeasible = int(output[last_infeasible_mention-10:last_infeasible_mention])
+        fail_2 = n_infeasible > 0
+#        fail_3 = " ** Infeasible solution. The solution process has been terminated" in output
+        if fail_1 or fail_2:
+            # tally number of infeasibilities
             infeas = infeas + 1
 
-            # delete output csv as nonsense
-            os.remove(os.path.join(here, '..', 'data_output', 'dice_below2deg', f'{config:07d}.csv'))
+            # Sometimes CSV output is produced and is nonsense, sometimes it isn't produced.
+            # If it isn't, trying to delete a non-existing file will cause an error, so
+            # check first
+            if os.path.isfile(os.path.join(here, '..', 'data_output', 'dice_below2deg', f'{config:07d}.csv')):
+                os.remove(os.path.join(here, '..', 'data_output', 'dice_below2deg', f'{config:07d}.csv'))
 
 print(f'{infeas} out of {n_configs} were infeasible')
