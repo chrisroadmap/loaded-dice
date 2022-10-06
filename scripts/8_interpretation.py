@@ -4,6 +4,8 @@ import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
 
+from fair.energy_balance_model import EnergyBalanceModel
+
 here = os.path.dirname(os.path.realpath(__file__))
 
 os.makedirs(os.path.join(here, '..', 'figures'), exist_ok=True)
@@ -12,6 +14,31 @@ ensemble_size=1001
 
 df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
 configs = df_configs.index
+
+ecs = np.zeros(1001)
+tcr = np.zeros(1001)
+timescales = np.zeros((1001, 3))
+response = np.zeros((1001, 3))
+
+for i, config in enumerate(configs):
+    ebm = EnergyBalanceModel(
+        ocean_heat_capacity = df_configs.loc[config, 'c1':'c3'],
+        ocean_heat_transfer = df_configs.loc[config, 'kappa1':'kappa3'],
+        deep_ocean_efficacy = df_configs.loc[config, 'epsilon'],
+        gamma_autocorrelation = df_configs.loc[config, 'gamma'],
+        timestep=5,
+        stochastic_run=False,
+    )
+    ebm.emergent_parameters()
+    ecs[i], tcr[i], timescales[i, :], response[i, :] = (ebm.ecs, ebm.tcr, ebm.timescales, ebm.response_coefficients)
+
+#ECS = df_configs['F_4xCO2']/df_configs['kappa1']/2
+print(np.percentile(ecs, (5,50,95)))
+print(np.percentile(tcr, (5,50,95)))
+print(np.percentile(timescales, (5,50,95)))
+print(np.percentile(response, (5,50,95)))
+import sys
+sys.exit()
 
 pl.rcParams['figure.figsize'] = (12/2.54, 12/2.54)
 pl.rcParams['font.size'] = 9
@@ -28,7 +55,7 @@ pl.rcParams['axes.spines.top'] = True
 pl.rcParams['axes.spines.bottom'] = True
 pl.rcParams['figure.dpi'] = 150
 
-for scenario in ['dice_1p5deglowOS']:
+for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     dfs = []
     outputs = {}
     outputs['CO2'] = np.ones((100, ensemble_size)) * np.nan
@@ -105,4 +132,7 @@ for scenario in ['dice_1p5deglowOS']:
     fig.tight_layout()
     pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections_{scenario}.png'))
     pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections_{scenario}.pdf'))
+    pl.show()
+
+    pl.scatter(ecs, outputs['SCC'][0, :])
     pl.show()
