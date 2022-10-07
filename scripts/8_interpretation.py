@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from fair.energy_balance_model import EnergyBalanceModel
+from fair.forcing.ghg import meinshausen2020
 
 here = os.path.dirname(os.path.realpath(__file__))
 
@@ -17,8 +18,18 @@ configs = df_configs.index
 
 ecs = np.zeros(1001)
 tcr = np.zeros(1001)
-timescales = np.zeros((1001, 3))
-response = np.zeros((1001, 3))
+
+erf_2co2 = meinshausen2020(
+    np.array([554.30, 731.41, 273.87]) * np.ones((1, 1, 1, 3)),
+    np.array([277.15, 731.41, 273.87]) * np.ones((1, 1, 1, 3)),
+    np.array((1.05, 0.86, 1.07)) * np.ones((1, 1, 1, 1)),
+    np.ones((1, 1, 1, 3)),
+    np.array([True, False, False]),
+    np.array([False, True, False]),
+    np.array([False, False, True]),
+    np.array([False, False, False])
+).squeeze()[0]
+calibrated_f4co2_mean = df_configs['F_4xCO2'].mean()
 
 for i, config in enumerate(configs):
     ebm = EnergyBalanceModel(
@@ -26,19 +37,12 @@ for i, config in enumerate(configs):
         ocean_heat_transfer = df_configs.loc[config, 'kappa1':'kappa3'],
         deep_ocean_efficacy = df_configs.loc[config, 'epsilon'],
         gamma_autocorrelation = df_configs.loc[config, 'gamma'],
+        forcing_4co2 = 2 * erf_2co2 * (1 + 0.561*(calibrated_f4co2_mean - df_configs.loc[config, 'F_4xCO2'])/calibrated_f4co2_mean),
         timestep=5,
         stochastic_run=False,
     )
     ebm.emergent_parameters()
-    ecs[i], tcr[i], timescales[i, :], response[i, :] = (ebm.ecs, ebm.tcr, ebm.timescales, ebm.response_coefficients)
-
-#ECS = df_configs['F_4xCO2']/df_configs['kappa1']/2
-print(np.percentile(ecs, (5,50,95)))
-print(np.percentile(tcr, (5,50,95)))
-print(np.percentile(timescales, (5,50,95)))
-print(np.percentile(response, (5,50,95)))
-import sys
-sys.exit()
+    ecs[i], tcr[i] = (ebm.ecs, ebm.tcr)
 
 pl.rcParams['figure.figsize'] = (12/2.54, 12/2.54)
 pl.rcParams['font.size'] = 9
