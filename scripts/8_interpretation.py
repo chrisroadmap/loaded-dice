@@ -68,10 +68,12 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     outputs['SCC'] = np.ones((100, ensemble_size)) * np.nan
     outputs['E'] = np.ones((100, ensemble_size)) * np.nan
     outputs['F'] = np.ones((100, ensemble_size)) * np.nan
+    outputs['infeasible'] = np.zeros((ensemble_size), dtype=bool)
     for run, config in enumerate(configs[:ensemble_size]):
         try:
             dfs.append(pd.read_csv(os.path.join(here, "..", "data_output", scenario, f"{config:07d}.csv"), index_col=0))
         except:
+            outputs['infeasible'][run] = True
             pass
 
     for run in range(ensemble_size):
@@ -90,8 +92,6 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     print('temperature 2100', np.nanpercentile(outputs['T'][16, :], (5, 50, 95)))  # temperature 2100
     print('temperature peak', np.nanpercentile(np.max(outputs['T'], axis=0), (5, 50, 95)))  # peak temperature
     print('forcing     2100', np.nanpercentile(outputs['F'][16, :], (5, 50, 95)))  # radiative forcing 2100
-
-    fig, ax = pl.subplots(2,2)
 
     yunit = {
         'E': 'GtCO$_2$ yr$^{-1}$',
@@ -112,31 +112,34 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
         'SCC': (0, 1000)
     }
 
+    # fig, ax = pl.subplots(2,2)
+    # for i, var in enumerate(['E', 'CO2', 'T', 'SCC']):
+    #     ax[i//2,i%2].fill_between(
+    #         np.arange(2020, 2520, 5),
+    #         np.nanpercentile(outputs[var], 5, axis=1),
+    #         np.nanpercentile(outputs[var], 95, axis=1),
+    #         color='0.8'
+    #     )
+    #     ax[i//2,i%2].fill_between(
+    #         np.arange(2020, 2520, 5),
+    #         np.nanpercentile(outputs[var], 16, axis=1),
+    #         np.nanpercentile(outputs[var], 84, axis=1),
+    #         color='0.6'
+    #     )
+    #     ax[i//2,i%2].plot(np.arange(2020, 2520, 5), np.nanmedian(outputs[var], axis=1), color='k')
+    #     ax[i//2,i%2].set_xlim(2020,2125)
+    #     ax[i//2,i%2].set_title(title[var])
+    #     ax[i//2,i%2].set_ylabel(yunit[var])
+    #     ax[i//2,i%2].set_ylim(ylim[var])
+    #     ax[i//2,i%2].set_xticks(np.arange(2025, 2130, 25))
+    #     ax[i//2,i%2].axhline(0, ls=':', color='k')
+    # fig.tight_layout()
+    # pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections_{scenario}.png'))
+    # pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections_{scenario}.pdf'))
+    # pl.show()
+    #
+    # pl.scatter(ecs, outputs['SCC'][0, :])
+    # pl.show()
 
-    for i, var in enumerate(['E', 'CO2', 'T', 'SCC']):
-        ax[i//2,i%2].fill_between(
-            np.arange(2020, 2520, 5),
-            np.nanpercentile(outputs[var], 5, axis=1),
-            np.nanpercentile(outputs[var], 95, axis=1),
-            color='0.8'
-        )
-        ax[i//2,i%2].fill_between(
-            np.arange(2020, 2520, 5),
-            np.nanpercentile(outputs[var], 16, axis=1),
-            np.nanpercentile(outputs[var], 84, axis=1),
-            color='0.6'
-        )
-        ax[i//2,i%2].plot(np.arange(2020, 2520, 5), np.nanmedian(outputs[var], axis=1), color='k')
-        ax[i//2,i%2].set_xlim(2020,2125)
-        ax[i//2,i%2].set_title(title[var])
-        ax[i//2,i%2].set_ylabel(yunit[var])
-        ax[i//2,i%2].set_ylim(ylim[var])
-        ax[i//2,i%2].set_xticks(np.arange(2025, 2130, 25))
-        ax[i//2,i%2].axhline(0, ls=':', color='k')
-    fig.tight_layout()
-    pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections_{scenario}.png'))
-    pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections_{scenario}.pdf'))
-    pl.show()
-
-    pl.scatter(ecs, outputs['SCC'][0, :])
-    pl.show()
+    pl.hist(ecs[~outputs['infeasible']], bins=np.arange(0, 8, 0.1), alpha=0.3)
+pl.show()
