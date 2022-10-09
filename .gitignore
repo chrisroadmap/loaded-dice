@@ -22,7 +22,7 @@ scripts/gams_scripts
 *.blg
 *.dvi
 *.log
-#manuscript/*.pdf
+manuscript/*/*.pdf
 *.ps
 *.synctex.gz
 *.tex~
