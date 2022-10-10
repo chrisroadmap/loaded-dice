@@ -22,15 +22,16 @@ scripts/gams_scripts
 *.blg
 *.dvi
 *.log
-manuscript/*/*.pdf
+manuscript/*.pdf
 *.ps
 *.synctex.gz
 *.tex~
 
-# large input files
+# large input files that exist in other repositories or processed
 data_input/rcmip
 data_input/fair-1.6.2
 data_input/sr15_scenarios
+data_input/rff_population_gdp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

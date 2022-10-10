@@ -8,6 +8,8 @@ dependencies:
   - numpy
   - pandas
   - pooch
+  - py7zr
+  - pyarrow
   - scipy
   - pip
   - pip:
