@@ -20,7 +20,7 @@ with py7zr.SevenZipFile(zipfile, mode='r') as z:
 
 data = np.ones((57, 10000)) * np.nan
 for run in tqdm(range(1, 10001)):
-    df = feather.read_feather(f'pop_income/rffsp_pop_income_run_{run}.feather')
+    df = feather.read_feather(os.path.join(here, '..', 'data_input', 'rff_population_gdp', 'rffsp_pop_income_run_{run}.feather'))
     for period, year in enumerate(range(2020, 2305, 5)):
         data[period, run-1] = df[df.Year==year].Pop.sum()
 
