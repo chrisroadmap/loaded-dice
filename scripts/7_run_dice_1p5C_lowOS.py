@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 
+import numpy as np
 from tqdm import tqdm
 import pandas as pd
 
@@ -24,13 +25,22 @@ df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', '
 df_co2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'co2_forcing_ssp119.csv'), index_col=0)
 df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp119.csv'), index_col=0)
 
-df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'un-population', 'un-median-projections-20220928.csv'), index_col=0)
-pop = df_pop['population_bn'].values
-
 infeas = 0
 n_configs = 1001
 
-for run, config in tqdm(enumerate(configs[:n_configs])):
+# Load RFF population scenarios and extend to 2500 using a growth rate that converges to zero
+df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'rff_population_gdp', 'population.csv'), index_col=0)
+data_pop = df_pop.loc[1:n_configs+1, '2020':'2300'].values
+growth_pop = (df_pop.loc[1:n_configs+1, '2255':'2300'].values/df_pop.loc[1:n_configs+1, '2250':'2295'].values).mean(axis=1)
+data_ext_pop = np.ones((n_configs+1, 43))
+data_ext_pop[:, 0] = growth_pop * data_pop[:, -1]
+
+for period in range(1, 43):
+    data_ext_pop[:, period] = data_ext_pop[:, period-1] * ((42-period)/42*growth_pop + period/42)
+
+population_sample = np.concatenate((data_pop, data_ext_pop), axis=1)/1e6
+
+for run, config in tqdm(enumerate(configs[:n_configs]), total=n_configs):
     t1 = df_temp.loc[config, 'mixed_layer']
     t2 = df_temp.loc[config, 'mid_ocean']
     t3 = df_temp.loc[config, 'deep_ocean']
@@ -47,6 +57,7 @@ for run, config in tqdm(enumerate(configs[:n_configs])):
     cbox4 = df_cbox.loc[config, 'fast']
     co2_2020 = df_cbox.loc[config, 'co2_2020']
     co2_1750 = df_configs.loc[config, 'co2_concentration_1750']
+    pop = population_sample[run, :]
 
     template = f'''
 $ontext
