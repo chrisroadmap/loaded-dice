@@ -3,11 +3,9 @@
 import copy
 import os
 
-from climateforcing.utils import mkdir_p
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
-import pyam
 import statsmodels.api as sm
 
 here = os.path.dirname(os.path.realpath(__file__))
