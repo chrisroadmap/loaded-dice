@@ -33,6 +33,12 @@ data_input/fair-1.6.2
 data_input/sr15_scenarios
 data_input/rff_population_gdp
 
+# DICE and climate output files. We want to save these eventually, but during the development process committing them each time something changes is painful
+data_output
+#data_output/dice
+#data_output/dice_below2deg
+#data_output/dice_1p5deglowOS
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
