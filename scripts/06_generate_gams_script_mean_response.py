@@ -100,7 +100,7 @@ PARAMETERS
         deland   Decline rate of land emissions (per period)           /0.115/
         e0       Industrial emissions 2020 (GtCO2 per year)            /37.39/
 * projections from RCMIP (should use GCP; TODO)
-        miu0     Initial emissions control rate for base case 2015     /0.0/
+        miu0     Initial emissions control rate for base case 2015     /0.15/
 * Initial Conditions
         co2_2020 Initial concentration in atmosphere 2020 (GtC)        /{co2_2020*carbon_convert}/
         co2_1750 Pre-industrial concentration atmosphere  (GtC)        /{co2_1750*carbon_convert}/
@@ -364,7 +364,7 @@ CCA.lo(t)             = 0;
 
 * Control rate limits
 MIU.up(t)             = limmiu;
-MIU.up(t)$(t.val<30)  = 1;
+MIU.up(t)$(t.val<8)  = 1;
 
 ** Upper and lower bounds for stability
 K.LO(t)         = 1;

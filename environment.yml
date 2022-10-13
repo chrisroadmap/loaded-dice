@@ -10,8 +10,11 @@ dependencies:
   - pooch
   - py7zr
   - pyarrow
+  - scmdata
   - scipy
+  - statsmodels
   - pip
   - pip:
     - -e ../fair2.1-calibrate
+    - aneris-iamc[units]
 
