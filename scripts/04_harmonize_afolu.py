@@ -27,7 +27,7 @@ history = scmdata.ScmRun(
 
 
 scenarios = scmdata.ScmRun(
-    os.path.join(here, "..", "data_input", "wg3", "co2_ffi_afolu.csv"), lowercase_cols=True
+    os.path.join(here, "..", "data_input", "wg3", "co2_ffi_afolu_price.csv"), lowercase_cols=True
 ).filter(region='World', variable=variables).timeseries(time_axis="year")
 
 overrides = pd.DataFrame(
