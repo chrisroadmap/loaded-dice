@@ -1,16 +1,31 @@
-"""Generate a GAMS script for the mean climate response, for testing."""
-
+import json
 import os
+import subprocess
 
+from tqdm import tqdm
+import numpy as np
 import pandas as pd
 
 # should really import these constants from FaIR
 carbon_convert = 5.1352 * 12.011 / 28.97
 
+        # etree(t) /1 3.51744, 2 3.259400999, 3 3.070393627, 4 2.881386254, 5 2.522849029,
+        #           6 2.164311804, 7 1.332614458, 8 0.500917111, 9 -0.519499069, 10 -1.53991525,
+        #           11 -1.875551834, 12 -2.211188418, 13 -2.804266635, 14 -3.397344852, 15 -3.857233478,
+        #           16 -4.317122105, 17 -4.558599537, 18 -4.800076969, 19 -4.320069272, 20 -3.840061575,
+        #           21 -3.360053878, 22 -2.880046181, 23 -2.400038485	-1.920030788	-1.440023091	-0.960015394	-0.480007697	0
+
+class InfeasibleSolutionError(Exception):
+    def __init__(self, run):
+        print(f"Infeasible solution in run number {run}.")
+
 here = os.path.dirname(os.path.realpath(__file__))
 
 df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
 configs = df_configs.index
+
+os.makedirs(os.path.join(here, 'gams_scripts'), exist_ok=True)
+os.makedirs(os.path.join(here, '..', 'data_output', 'dice'), exist_ok=True)
 
 df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_ssp245.csv'), index_col=0)
 df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'gas_partitions_ssp245.csv'), index_col=0)
@@ -18,42 +33,53 @@ df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', '
 df_co2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'co2_forcing_ssp245.csv'), index_col=0)
 df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp245.csv'), index_col=0)
 
-df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'un-population', 'un-median-projections-20220928.csv'), index_col=0)
-pop = df_pop['population_bn'].values
+#df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'un-population', 'un-median-projections-20220928.csv'), index_col=0)
+#pop = df_pop['population_bn'].values
 
-t1 = df_temp['mixed_layer'].mean()
-t2 = df_temp['mid_ocean'].mean()
-t3 = df_temp['deep_ocean'].mean()
-nonco2 = df_nonco2.mean(axis=0)
-cr = df_cr.mean(axis=0)
-f2x = df_co2['effective_f2x'].mean()
-r0 = df_configs['r0'].mean()
-ru = df_configs['rU'].mean()
-rt = df_configs['rT'].mean()
-ra = df_configs['rA'].mean()
-cbox1 = df_cbox['geological'].mean()
-cbox2 = df_cbox['slow'].mean()
-cbox3 = df_cbox['mid'].mean()
-cbox4 = df_cbox['fast'].mean()
-co2_2020 = df_cbox['co2_2020'].mean()
-co2_1750 = df_configs['co2_concentration_1750'].mean()
+n_configs = 1001
 
-template = f'''
+# Load RFF population scenarios and extend to 2500 using a growth rate that converges to zero
+df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'rff_population_gdp', 'population.csv'), index_col=0)
+data_pop = df_pop.loc[1:n_configs+1, '2020':'2300'].values
+growth_pop = (df_pop.loc[1:n_configs+1, '2255':'2300'].values/df_pop.loc[1:n_configs+1, '2250':'2295'].values).mean(axis=1)
+data_ext_pop = np.ones((n_configs+1, 43))
+data_ext_pop[:, 0] = growth_pop * data_pop[:, -1]
+
+for period in range(1, 43):
+    data_ext_pop[:, period] = data_ext_pop[:, period-1] * ((42-period)/42*growth_pop + period/42)
+
+population_sample = np.concatenate((data_pop, data_ext_pop), axis=1)/1e6
+
+for run, config in tqdm(enumerate(configs[:n_configs]), total=n_configs):
+    t1 = df_temp.loc[config, 'mixed_layer']
+    t2 = df_temp.loc[config, 'mid_ocean']
+    t3 = df_temp.loc[config, 'deep_ocean']
+    nonco2 = df_nonco2.loc[config, :].values
+    cr = df_cr.loc[config].values
+    f2x = df_co2.loc[config, 'effective_f2x']
+    r0 = df_configs.loc[config, 'r0']
+    ru = df_configs.loc[config, 'rU']
+    rt = df_configs.loc[config, 'rT']
+    ra = df_configs.loc[config, 'rA']
+    cbox1 = df_cbox.loc[config, 'geological']
+    cbox2 = df_cbox.loc[config, 'slow']
+    cbox3 = df_cbox.loc[config, 'mid']
+    cbox4 = df_cbox.loc[config, 'fast']
+    co2_2020 = df_cbox.loc[config, 'co2_2020']
+    co2_1750 = df_configs.loc[config, 'co2_concentration_1750']
+    pop = population_sample[run, :]
+
+    template = f'''
 $ontext
 DICE with FaIR carbon cycle and climate response.
-
 Climate module by Chris Smith, 28 June 2022. Economic model is unmodified from the
 beta version of DICE-2016R, by William Nordhaus, and downloaded from
 http://www.econ.yale.edu/~nordhaus/homepage/homepage/DICE2016R-091916ap.gms
-
 Version is DICE-2016R-091916ap.gms
 $offtext
-
 $title        DICE-2016R-FAIR June 2022
-
 set     t        Time periods (5 years per period)                     /1*100/
         box      Carbon box                                            /1*4/
-
 PARAMETERS
 ** Availability of fossil fuels
         fosslim  Maximum cumulative extraction fossil fuels (GtC)      /6000/
@@ -75,23 +101,23 @@ PARAMETERS
         l(t)     /1 {pop[0]}, 2 {pop[1]}, 3 {pop[2]}, 4 {pop[3]}, 5 {pop[4]},
                   6 {pop[5]}, 7 {pop[6]}, 8 {pop[7]}, 9 {pop[8]}, 10 {pop[9]},
                  11 {pop[10]}, 12 {pop[11]}, 13 {pop[12]}, 14 {pop[13]}, 15 {pop[14]},
-                 16 {pop[15]}, 17 {pop[16]}, 18 {pop[16]}, 19 {pop[16]}, 20 {pop[16]},
-                 21 {pop[16]}, 22 {pop[16]}, 23 {pop[16]}, 24 {pop[16]}, 25 {pop[16]},
-                 26 {pop[16]}, 27 {pop[16]}, 28 {pop[16]}, 29 {pop[16]}, 30 {pop[16]},
-                 31 {pop[16]}, 32 {pop[16]}, 33 {pop[16]}, 34 {pop[16]}, 35 {pop[16]},
-                 36 {pop[16]}, 37 {pop[16]}, 38 {pop[16]}, 39 {pop[16]}, 40 {pop[16]},
-                 41 {pop[16]}, 42 {pop[16]}, 43 {pop[16]}, 44 {pop[16]}, 45 {pop[16]},
-                 46 {pop[16]}, 47 {pop[16]}, 48 {pop[16]}, 49 {pop[16]}, 50 {pop[16]},
-                 51 {pop[16]}, 52 {pop[16]}, 53 {pop[16]}, 54 {pop[16]}, 55 {pop[16]},
-                 56 {pop[16]}, 57 {pop[16]}, 58 {pop[16]}, 59 {pop[16]}, 60 {pop[16]},
-                 61 {pop[16]}, 62 {pop[16]}, 63 {pop[16]}, 64 {pop[16]}, 65 {pop[16]},
-                 66 {pop[16]}, 67 {pop[16]}, 68 {pop[16]}, 69 {pop[16]}, 70 {pop[16]},
-                 71 {pop[16]}, 72 {pop[16]}, 73 {pop[16]}, 74 {pop[16]}, 75 {pop[16]},
-                 76 {pop[16]}, 77 {pop[16]}, 78 {pop[16]}, 79 {pop[16]}, 80 {pop[16]},
-                 81 {pop[16]}, 82 {pop[16]}, 83 {pop[16]}, 84 {pop[16]}, 85 {pop[16]},
-                 86 {pop[16]}, 87 {pop[16]}, 88 {pop[16]}, 89 {pop[16]}, 90 {pop[16]},
-                 91 {pop[16]}, 92 {pop[16]}, 93 {pop[16]}, 94 {pop[16]}, 95 {pop[16]},
-                 96 {pop[16]}, 97 {pop[16]}, 98 {pop[16]}, 99 {pop[16]}, 100 {pop[16]}/
+                 16 {pop[15]}, 17 {pop[16]}, 18 {pop[17]}, 19 {pop[18]}, 20 {pop[19]},
+                 21 {pop[20]}, 22 {pop[21]}, 23 {pop[22]}, 24 {pop[23]}, 25 {pop[24]},
+                 26 {pop[25]}, 27 {pop[26]}, 28 {pop[27]}, 29 {pop[28]}, 30 {pop[29]},
+                 31 {pop[30]}, 32 {pop[31]}, 33 {pop[32]}, 34 {pop[33]}, 35 {pop[34]},
+                 36 {pop[35]}, 37 {pop[36]}, 38 {pop[37]}, 39 {pop[38]}, 40 {pop[39]},
+                 41 {pop[40]}, 42 {pop[41]}, 43 {pop[42]}, 44 {pop[43]}, 45 {pop[44]},
+                 46 {pop[45]}, 47 {pop[46]}, 48 {pop[47]}, 49 {pop[48]}, 50 {pop[49]},
+                 51 {pop[50]}, 52 {pop[51]}, 53 {pop[52]}, 54 {pop[53]}, 55 {pop[54]},
+                 56 {pop[55]}, 57 {pop[56]}, 58 {pop[57]}, 59 {pop[58]}, 60 {pop[59]},
+                 61 {pop[60]}, 62 {pop[61]}, 63 {pop[62]}, 64 {pop[63]}, 65 {pop[64]},
+                 66 {pop[65]}, 67 {pop[66]}, 68 {pop[67]}, 69 {pop[68]}, 70 {pop[69]},
+                 71 {pop[70]}, 72 {pop[71]}, 73 {pop[72]}, 74 {pop[73]}, 75 {pop[74]},
+                 76 {pop[75]}, 77 {pop[76]}, 78 {pop[77]}, 79 {pop[78]}, 80 {pop[79]},
+                 81 {pop[80]}, 82 {pop[81]}, 83 {pop[82]}, 84 {pop[83]}, 85 {pop[84]},
+                 86 {pop[85]}, 87 {pop[86]}, 88 {pop[87]}, 89 {pop[88]}, 90 {pop[89]},
+                 91 {pop[90]}, 92 {pop[91]}, 93 {pop[92]}, 94 {pop[93]}, 95 {pop[94]},
+                 96 {pop[95]}, 97 {pop[96]}, 98 {pop[97]}, 99 {pop[98]}, 100 {pop[99]}/
 ** Emissions parameters
         gsigma1  Initial growth of sigma (per year)                    /-0.0152/
         dsig     Decline rate of decarbonization (per period)          /-0.001/
@@ -100,7 +126,7 @@ PARAMETERS
         deland   Decline rate of land emissions (per period)           /0.115/
         e0       Industrial emissions 2020 (GtCO2 per year)            /37.39/
 * projections from RCMIP (should use GCP; TODO)
-        miu0     Initial emissions control rate for base case 2015     /0.15/
+        miu0     Initial emissions control rate for base case 2020     /0.15/
 * Initial Conditions
         co2_2020 Initial concentration in atmosphere 2020 (GtC)        /{co2_2020*carbon_convert}/
         co2_1750 Pre-industrial concentration atmosphere  (GtC)        /{co2_1750*carbon_convert}/
@@ -166,22 +192,19 @@ PARAMETERS
         a3       Damage exponent                                       /2.00/
 ** Abatement cost
         expcost2  Exponent of control cost function                    /2.6/
-        pback     Cost of backstop 2010$ per tCO2 2015                 /550/
+        pback     Cost of backstop 2020$ per tCO2 2015                 /679/
         gback     Initial cost decline backstop cost per period        /.025/
         limmiu    Upper limit on control rate after 2150               /1.2/
         tnopol    Period before which no emissions controls base       /45/
         cprice0   Initial base carbon price (2010$ per tCO2)           /2/
         gcprice   Growth rate of base carbon price per year            /.02/
-
 ** Scaling and inessential parameters
 * Note that these are unnecessary for the calculations
 * They ensure that MU of first period's consumption =1 and PV cons = PV utilty
         scale1      Multiplicative scaling coefficient                 /0.0302455265681763/
         scale2      Additive scaling coefficient                       /-10993.704/ ;
-
 * Program control variables
 sets    tfirst(t), tlast(t), tearly(t), tlate(t);
-
 PARAMETERS
         l(t)          Level of population and labor
         al(t)         Level of total factor productivity
@@ -192,8 +215,6 @@ PARAMETERS
         gl(t)         Growth rate of labor
         gcost1        Growth of cost factor
         gsig(t)       Change in sigma (cumulative improvement of energy efficiency)
-        etree(t)      Emissions from deforestation
-        cumetree(t)   Cumulative from land
         cost1(t)      Adjusted cost for backstop
         pbacktime(t)  Backstop price
         optlrsav      Optimal long-run savings rate used for transversality
@@ -205,8 +226,8 @@ PARAMETERS
 * Program control definitions
         tfirst(t) = yes$(t.val eq 1);
         tlast(t)  = yes$(t.val eq card(t));
-        tearly(t) = yes$(t.val le 17);
-        tlate(t)  = yes$(t.val gt 17);
+        tearly(t) = yes$(t.val le 16);
+        tlate(t)  = yes$(t.val gt 16);
 * Parameters for carbon cycle
         g1 = sum(box,
                 a(box) * tau(box) *
@@ -223,7 +244,6 @@ PARAMETERS
         al("1") = a0; loop(t, al(t+1)=al(t)/((1-ga(t))););
         gsig("1")=gsigma1; loop(t,gsig(t+1)=gsig(t)*((1+dsig)**tstep) ;);
         sigma("1")=sig0;   loop(t,sigma(t+1)=(sigma(t)*exp(gsig(t)*tstep)););
-
         pbacktime(t)=pback*(1-gback)**(t.val-1);
         cost1(t) = pbacktime(t)*sigma(t)/expcost2/1000;
 
@@ -232,10 +252,9 @@ PARAMETERS
 
         rr(t) = 1/((1+prstp)**(tstep*(t.val-1)));
         optlrsav = (dk + .004)/(dk + .004*elasmu + prstp)*gama;
-
+        detree(t) = 1 - 1 / (1 + exp(-0.75*(t.val-23)));
 * Base Case Carbon Price
         cpricebase(t)= cprice0*(1+gcprice)**(5*(t.val-1));
-
 VARIABLES
         MIU(t)          Emission control rate GHGs
         FORC(t)         Increase in radiative forcing (watts per m2 from 1750)
@@ -245,6 +264,7 @@ VARIABLES
         co2(t)          Carbon concentration increase in atmosphere (GtC from 1750)
         E(t)            Total CO2 emissions (GtCO2 per year)
         EIND(t)         Industrial emissions (GtCO2 per year)
+        ETREE(t)        Land use emissions (GtCO2 per year)
         C(t)            Consumption (trillions 2005 US dollars per year)
         K(t)            Capital stock (trillions 2005 US dollars)
         CPC(t)          Per capita consumption (thousands 2005 USD per year)
@@ -277,6 +297,7 @@ NONNEGATIVE VARIABLES  MIU, T1, co2, MU, ML, Y, YGROSS, C, K, I, alpha;
 EQUATIONS
 *Emissions and Damages
         EEQ(t)          Emissions equation
+        EETREE(t)       Land use emissions
         EINDEQ(t)       Industrial emissions
         CCAEQ(t)       Cumulative industrial carbon emissions
         CCATOTEQ(t)     Cumulative total carbon emissions
@@ -286,7 +307,6 @@ EQUATIONS
         ABATEEQ(t)      Cost of emissions reductions equation
         MCABATEEQ(t)    Equation for MC abatement
         CARBPRICEEQ(t)  Carbon price equation from abatement
-
 *Climate and carbon cycle
         co2eq(t)         Atmospheric concentration equation
         ATFRACEQ(t)      Atmospheric airborne fraction equation
@@ -300,7 +320,6 @@ EQUATIONS
         CBOX3EQ(t)       Carbon box 3 equation
         CBOX4EQ(t)       Carbon box 4 equation
 *constrainT  if we want to e.g. limit warming to 2 degrees
-
 *Economic variables
         YGROSSEQ(t)      Output gross equation
         YNETEQ(t)        Output net of damages equation
@@ -310,12 +329,10 @@ EQUATIONS
         SEQ(t)           Savings rate equation
         KK(t)            Capital balance equation
         RIEQ(t)          Interest rate equation
-
 * Utility
         CEMUTOTPEREQ(t)  Period utility
         PERIODUEQ(t)     Instantaneous utility function equation
         UTIL             Objective function;
-
 ** Equations of the model
 * Emissions and Damages
  eeq(t)..             E(t)           =E= EIND(t) + etree(t);
@@ -328,7 +345,6 @@ EQUATIONS
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
  mcabateeq(t)..       MCABATE(t)     =E= pbacktime(t) * MIU(t)**(expcost2-1);
  carbpriceeq(t)..     CPRICE(t)      =E= pbacktime(t) * (MIU(t))**(expcost2-1);
-
 * Climate and carbon cycle
  atfraceq(t)..        atfrac(t)      =E= ((co2(t)-co2_1750)/(ccatot(t)+0.0000001));
  iirfeq(t)..          IIRF(t)        =E= r0 + ru * (1-atfrac(t)) * ccatot(t)*3.664 + rt * T1(t) + ra * atfrac(t) * ccatot(t)*3.664;
@@ -352,19 +368,16 @@ EQUATIONS
  seq(t)..             I(t)           =E= S(t) * Y(t);
  kk(t+1)..            K(t+1)         =L= (1-dk)**tstep * K(t) + tstep * I(t);
  rieq(t+1)..          RI(t)          =E= (1+prstp) * (CPC(t+1)/CPC(t))**(elasmu/tstep) - 1;
-
 * Utility
  cemutotpereq(t)..    CEMUTOTPER(t)  =E= PERIODU(t) * L(t)*1000 * rr(t);
  periodueq(t)..       PERIODU(t)     =E= ((C(T)/L(T))**(1-elasmu)-1)/(1-elasmu)-1;
  util..               UTILITY        =E= tstep * scale1 * sum(t,  CEMUTOTPER(t)) + scale2 ;
-
 * Resource limit
 CCA.up(t)             = fosslim;
 CCA.lo(t)             = 0;
-
 * Control rate limits
 MIU.up(t)             = limmiu;
-MIU.up(t)$(t.val<8)  = 1;
+MIU.up(t)$(t.val<8)   = 1;
 
 ** Upper and lower bounds for stability
 K.LO(t)         = 1;
@@ -384,12 +397,10 @@ IIRF.UP(t)      = 97;
 IIRF.LO(t)      = 16;
 alpha.lo(t)     = 0.01;
 alpha.up(t)     = 100;
-
 * Control variables
 set lag10(t) ;
 lag10(t) =  yes$(t.val gt card(t)-10);
 S.FX(lag10(t)) = optlrsav;
-
 * Initial conditions
 CCA.FX(tfirst)    = 470.55;
 K.FX(tfirst)      = k0;
@@ -401,11 +412,11 @@ IIRF.l(tfirst)    = 50;
 atfrac.l(tfirst)  = 0.526;
 alpha.l(tfirst)   = 0.81;
 *these three lines above need a check
+ETREE.l(tfirst)   = 4;
 cbox1.fx(tfirst)  = icbox1;
 cbox2.fx(tfirst)  = icbox2;
 cbox3.fx(tfirst)  = icbox3;
 cbox4.fx(tfirst)  = icbox4;
-
 ** Solution options
 option iterlim = 99999;
 option reslim  = 99999;
@@ -424,7 +435,6 @@ If (ifopt eq 0,
        a2 = a20;
       cprice.up(t)$(t.val<tnopol+1) = max(photel(t),cpricebase(t));
 );
-
 miu.fx('1')$(ifopt=1) = miu0;
 solve DICE maximizing utility using nlp;
 solve DICE maximizing utility using nlp;
@@ -439,7 +449,7 @@ ppm(t)        = co2.l(t)/{carbon_convert};
 * For ALL relevant model outputs, see 'PutOutputAllT.gms' in the Include folder.
 * The statement at the end of the *.lst file "Output..." will tell you where to find the file.
 
-file results /"mean_config.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
+file results /"{here}/../data_output/dice/{config:07d}.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
 put results;
 put // "Period";
 Loop (T, put T.val);
@@ -502,7 +512,7 @@ Loop (T, put periodu.l(t));
 put / "Consumption" ;
 Loop (T, put C.l(t));
 put / "Land emissions" ;
-Loop (T, put etree(t));
+Loop (T, put etree.l(t));
 put / "Cumulative ind emissions" ;
 Loop (T, put cca.l(t));
 put / "Cumulative total emissions" ;
@@ -528,8 +538,34 @@ Loop (T, put cbox4.l(t));
 put / "Objective" ;
 put utility.l;
 putclose;
-'''
+    '''
 
-# write the script
-with open(os.path.join(here, 'mean_config.gms'), 'w') as f:
-    f.write(template)
+    # write the script
+    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.gms'), 'w') as f:
+        f.write(template)
+
+    # run the command
+    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.out'), "w") as outfile:
+        subprocess.run(
+            [
+                'gams',
+                os.path.join(
+                    here,
+                    'gams_scripts',
+                    f'config{config:07d}.gms'
+                ),
+                '-o',
+                os.path.join(
+                    here,
+                    'gams_scripts',
+                    f'config{config:07d}.lst'
+                ),
+            ],
+            stdout = outfile,
+        )
+
+    # were results feasible?
+    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.lst')) as f:
+        output = f.read()
+        if " ** Infeasible solution. Reduced gradient less than tolerance." in output:
+            raise InfeasibleSolutionError(run)

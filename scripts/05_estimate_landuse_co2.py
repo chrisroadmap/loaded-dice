@@ -45,28 +45,42 @@ y = np.empty((0))
 x = np.empty((0, 3))
 
 ar6_edit.drop(columns=['2021', '2022', '2023', '2024'], inplace=True)
-# pl.plot(np.arange(2020, 2101, 5), ar6_edit.loc[ar6_edit['variable']=='Emissions|CO2|AFOLU', '2020':'2100'].interpolate(axis=1).T/1000)
-#
-# def polyfit(x, a, b, c, d, e):
-#     return a*x**4 + b*x**3 + c*x**2 + d*x + e
-#
-# median = np.median(ar6_edit.loc[ar6_edit['variable']=='Emissions|CO2|AFOLU', '2020':'2100'].interpolate(axis=1).T, axis=1)/1000
-# median_fit = op.curve_fit(polyfit, np.arange(1, 18), median)
-# p95 = np.percentile(ar6_edit.loc[ar6_edit['variable']=='Emissions|CO2|AFOLU', '2020':'2100'].interpolate(axis=1).T, 95, axis=1)/1000
-# p95_fit = op.curve_fit(polyfit, np.arange(1, 18), p95)
-# p05 = np.percentile(ar6_edit.loc[ar6_edit['variable']=='Emissions|CO2|AFOLU', '2020':'2100'].interpolate(axis=1).T, 5, axis=1)/1000
-# p05_fit = op.curve_fit(polyfit, np.arange(1, 18), p05)
-#
-# pl.plot(np.arange(2020, 2101, 5), median, color='k')
-# pl.plot(np.arange(2020, 2101, 5), polyfit(np.arange(1, 18), *median_fit[0]), color='k', ls='--')
-# pl.plot(np.arange(2020, 2101, 5), p95, color='k')
-# pl.plot(np.arange(2020, 2101, 5), polyfit(np.arange(1, 18), *p95_fit[0]), color='k', ls='--')
-# pl.plot(np.arange(2020, 2101, 5), p05, color='k')
-# pl.plot(np.arange(2020, 2101, 5), polyfit(np.arange(1, 18), *p05_fit[0]), color='k', ls='--')
-# pl.ylabel('GtCO2/yr')
-# pl.axhline(0, color='k', ls=':')
-# pl.title('AR6 IAM scenarios, CO$_2$ AFOLU emissions,\nharmonised & passed vetting')
-# pl.show()
+
+for item in ar6.groupby(['model','scenario']):
+    model = item[0][0]
+    scenario = item[0][1]
+    if 'base' in scenario.lower() or 'nopolicy' in scenario.lower():
+        pl.plot(np.arange(2020, 2101, 5), ar6_edit.loc[
+            (ar6_edit['variable']=='Emissions|CO2|AFOLU')&
+            (ar6_edit['model']==model)&
+            (ar6_edit['scenario']==scenario),
+        '2020':'2100'].interpolate(axis=1).T/1000)
+pl.show()
+
+pl.plot(np.arange(2020, 2101, 5), ar6_edit.loc[ar6_edit['variable']=='Emissions|CO2|AFOLU', '2020':'2100'].interpolate(axis=1).T/1000)
+
+def polyfit(x, a, b, c, d, e):
+    return a*x**4 + b*x**3 + c*x**2 + d*x + e
+
+median = np.median(ar6_edit.loc[ar6_edit['variable']=='Emissions|CO2|AFOLU', '2020':'2100'].interpolate(axis=1).T, axis=1)/1000
+median_fit = op.curve_fit(polyfit, np.arange(1, 18), median)
+p95 = np.percentile(ar6_edit.loc[ar6_edit['variable']=='Emissions|CO2|AFOLU', '2020':'2100'].interpolate(axis=1).T, 95, axis=1)/1000
+p95_fit = op.curve_fit(polyfit, np.arange(1, 18), p95)
+p05 = np.percentile(ar6_edit.loc[ar6_edit['variable']=='Emissions|CO2|AFOLU', '2020':'2100'].interpolate(axis=1).T, 5, axis=1)/1000
+p05_fit = op.curve_fit(polyfit, np.arange(1, 18), p05)
+
+print(median_fit)
+
+pl.plot(np.arange(2020, 2101, 5), median, color='k')
+pl.plot(np.arange(2020, 2101, 5), polyfit(np.arange(1, 18), *median_fit[0]), color='k', ls='--')
+pl.plot(np.arange(2020, 2101, 5), p95, color='k')
+pl.plot(np.arange(2020, 2101, 5), polyfit(np.arange(1, 18), *p95_fit[0]), color='k', ls='--')
+pl.plot(np.arange(2020, 2101, 5), p05, color='k')
+pl.plot(np.arange(2020, 2101, 5), polyfit(np.arange(1, 18), *p05_fit[0]), color='k', ls='--')
+pl.ylabel('GtCO2/yr')
+pl.axhline(0, color='k', ls=':')
+pl.title('AR6 IAM scenarios, CO$_2$ AFOLU emissions,\nharmonised & passed vetting')
+pl.show()
 
 for year in range(2020, 2101, 10):
     afolu = ar6_edit.loc[(ar6_edit['variable']=='Emissions|CO2|AFOLU'), str(year)].values/1000

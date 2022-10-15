@@ -263,7 +263,7 @@ EQUATIONS
         CBOX4EQ(t)       Carbon box 4 equation
         etreeeq(t)       land use eq
         cumetreeeq(t)    cumulative land use eq
-*constrainT  if we want to e.g. limit warming to 2 degrees
+constrainT  if we want to e.g. limit warming to 2 degrees
 
 *Economic variables
         YGROSSEQ(t)      Output gross equation
@@ -292,7 +292,7 @@ EQUATIONS
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
  mcabateeq(t)..       MCABATE(t)     =E= pbacktime(t) * MIU(t)**(expcost2-1);
  carbpriceeq(t)..     CPRICE(t)      =E= pbacktime(t) * (MIU(t))**(expcost2-1);
- etreeeq(t)..         etree(t)       =e= (-0.3569 + 0.0443 * eind(t) - 0.1954 * t.val) * (1 - 1/(1+exp(-0.75*(t.val-22))));
+ etreeeq(t)..         etree(t)       =e= (4.4 - 8*MIU(t)) * (1 - 1/(1+exp(-0.75*(t.val-22))));
  cumetreeeq(t+1)..    cumetree(t+1)  =e= cumetree(t) + etree(t)*tstep/3.664;
 
 * Climate and carbon cycle
@@ -307,7 +307,7 @@ EQUATIONS
  t2eq(t+1)..          T2(t+1)        =E= EBM_A21 * T1(t) + EBM_A22 * T2(t) + EBM_A23 * T3(t) + EBM_B2 * FORC(t);
  t3eq(t+1)..          T3(t+1)        =E= EBM_A31 * T1(t) + EBM_A32 * T2(t) + EBM_A33 * T3(t) + EBM_B3 * FORC(t);
  co2eq(t)..           co2(t)         =E= co2_1750 + cbox1(t) + cbox2(t) + cbox3(t) + cbox4(t);
-* constrainT(t)..     T1(t)          =L= 2;
+ constrainT(t)..     T1(t)          =L= 2;
 
 * Economic variables
  ygrosseq(t)..        YGROSS(t)      =E= (al(t)*(L(t))**(1-GAMA))*(K(t)**GAMA);
