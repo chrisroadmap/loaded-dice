@@ -196,10 +196,7 @@ sm_df = pd.DataFrame(x, columns=['ffi', 'period', 'quantile'])
 sm_df['nonco2'] = y# - 3.21
 results = ols(formula = "nonco2 ~ ffi + period + quantile", data=sm_df).fit()
 
-#x = sm.add_constant(x)
-#model = sm.OLS(y, x)
-#results = model.fit()
 print(results.summary())
 
-#df_out = pd.DataFrame(results.params, index=['constant', 'CO2_EIP', 'period', 'log(price)_minus_log(26.4307)'], columns=['coefficient'])
-#df_out.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'afolu_regression.csv'))
+df_out = pd.DataFrame(results.params, index=['Intercept', 'ffi', 'period', 'quantile'], columns=['coefficient'])
+df_out.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'nonco2_regression.csv'))

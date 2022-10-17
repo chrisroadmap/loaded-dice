@@ -95,9 +95,6 @@ PARAMETERS
 ** Emissions parameters
         gsigma1  Initial growth of sigma (per year)                    /-0.0152/
         dsig     Decline rate of decarbonization (per period)          /-0.001/
-        eland0   Carbon emissions from land 2020 (GtCO2 per year)      /3.21/
-* projections from RCMIP (should use GCP; TODO)
-        deland   Decline rate of land emissions (per period)           /0.115/
         e0       Industrial emissions 2020 (GtCO2 per year)            /37.39/
 * projections from RCMIP (should use GCP; TODO)
         miu0     Initial emissions control rate for base case 2015     /0.15/
@@ -192,8 +189,6 @@ PARAMETERS
         gl(t)         Growth rate of labor
         gcost1        Growth of cost factor
         gsig(t)       Change in sigma (cumulative improvement of energy efficiency)
-        etree(t)      Emissions from deforestation
-        cumetree(t)   Cumulative from land
         cost1(t)      Adjusted cost for backstop
         pbacktime(t)  Backstop price
         optlrsav      Optimal long-run savings rate used for transversality
@@ -226,9 +221,6 @@ PARAMETERS
 
         pbacktime(t)=pback*(1-gback)**(t.val-1);
         cost1(t) = pbacktime(t)*sigma(t)/expcost2/1000;
-
-        etree(t) = eland0*(1-deland)**(t.val-1);
-        cumetree("1")= 190.9; loop(t,cumetree(t+1)=cumetree(t)+etree(t)*(5/3.664););
 
         rr(t) = 1/((1+prstp)**(tstep*(t.val-1)));
         optlrsav = (dk + .004)/(dk + .004*elasmu + prstp)*gama;
@@ -270,9 +262,11 @@ VARIABLES
         cbox4(t)        Carbon in box 4
         alpha(t)        Time-varying scale factor for CO2 carbon box timescale
         iirf(t)         time-integrated impulse response
-        atfrac(t)       Atmospheric share since 1850;
+        atfrac(t)       Atmospheric share since 1850
+        etree(t)        Land use emissions
+        cumetree(t)     Cumulative land use emissions;
 
-NONNEGATIVE VARIABLES  MIU, T1, co2, MU, ML, Y, YGROSS, C, K, I, alpha;
+NONNEGATIVE VARIABLES  MIU, T1, co2, MU, ML, Y, YGROSS, C, K, I, alpha, cprice;
 
 EQUATIONS
 *Emissions and Damages
@@ -299,6 +293,8 @@ EQUATIONS
         CBOX2EQ(t)       Carbon box 2 equation
         CBOX3EQ(t)       Carbon box 3 equation
         CBOX4EQ(t)       Carbon box 4 equation
+        etreeeq(t)       land use eq
+        cumetreeeq(t)    cumulative land use eq
 *constrainT  if we want to e.g. limit warming to 2 degrees
 
 *Economic variables
@@ -328,6 +324,8 @@ EQUATIONS
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
  mcabateeq(t)..       MCABATE(t)     =E= pbacktime(t) * MIU(t)**(expcost2-1);
  carbpriceeq(t)..     CPRICE(t)      =E= pbacktime(t) * (MIU(t))**(expcost2-1);
+ etreeeq(t)..         etree(t)       =e= (4.64 - 0.25*sqrt(cprice(t))) * (1 - 1/(1+exp(-0.75*(t.val-22))));
+ cumetreeeq(t+1)..    cumetree(t+1)  =e= cumetree(t) + etree(t)*tstep/3.664;
 
 * Climate and carbon cycle
  atfraceq(t)..        atfrac(t)      =E= ((co2(t)-co2_1750)/(ccatot(t)+0.0000001));
@@ -405,6 +403,7 @@ cbox1.fx(tfirst)  = icbox1;
 cbox2.fx(tfirst)  = icbox2;
 cbox3.fx(tfirst)  = icbox3;
 cbox4.fx(tfirst)  = icbox4;
+cumetree.fx(tfirst) = 190.9;
 
 ** Solution options
 option iterlim = 99999;

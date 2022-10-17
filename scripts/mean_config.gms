@@ -55,9 +55,6 @@ PARAMETERS
 ** Emissions parameters
         gsigma1  Initial growth of sigma (per year)                    /-0.0152/
         dsig     Decline rate of decarbonization (per period)          /-0.001/
-*        eland0   Carbon emissions from land 2020 (GtCO2 per year)      /3.26/
-* projections from RCMIP (should use GCP; TODO)
-*        deland   Decline rate of land emissions (per period)           /0.115/
         e0       Industrial emissions 2020 (GtCO2 per year)            /37.39/
 * projections from RCMIP (should use GCP; TODO)
         miu0     Initial emissions control rate for base case 2015     /0.15/
@@ -81,26 +78,6 @@ PARAMETERS
         ICBOX2   Initial GtC concentration of carbon box 2 in 2020     /101.89205189688752/
         ICBOX3   Initial GtC concentration of carbon box 3 in 2020     /36.31600258720073/
         ICBOX4   Initial GtC concentration of carbon box 4 in 2020     /5.309309491712028/
-        forcoth(t) /1 0.5586034340316819, 2 0.6380061283917714, 3 0.6579850225910713, 4 0.70087640873587, 5 0.7491116071321202,
-                  6 0.792419030767026, 7 0.8333127330628389, 8 0.8615460327157736, 9 0.8734715752459522, 10 0.8848020380630569,
-                  11 0.8980557290028139, 12 0.9150457745814712, 13 0.9351181168928525, 14 0.9578364848124932, 15 0.9856379090867746,
-                  16 1.0104671355644457, 17 1.0257616347189846, 18 1.0322835803248593, 19 1.0228672310524731, 20 1.0118982795401528,
-                  21 0.9995725690156995, 22 0.9860912318959861, 23 0.9716078510615029, 24 0.9562374270980125, 25 0.9400666925285995,
-                  26 0.9231619328459117, 27 0.9055746248151705, 28 0.8876186818917016, 29 0.8697476432815605, 30 0.8520070116586038,
-                  31 0.8344234199620753, 32 0.8170173151192619, 33 0.7998053591569111, 34 0.7828016328575648, 35 0.7660184205647086,
-                  36 0.7494667596544844, 37 0.7331568404573183, 38 0.7170983069855467, 39 0.7013004907367635, 40 0.6857725991460931,
-                  41 0.6705238735018039, 42 0.6555637267488974, 43 0.6409018687266534, 44 0.6265484245170017, 45 0.6125140503939241,
-                  46 0.5988100511613944, 47 0.5854485023133164, 48 0.5717321865024236, 49 0.5587608086811835, 50 0.549366085717064,
-                  51 0.5422606828848273, 52 0.5366631170613356, 53 0.5320895736365189, 54 0.5282367207150636, 55 0.5249113163354755,
-                  56 0.5219876019244867, 57 0.5193815058649107, 58 0.5170349999007468, 59 0.5149065774653423, 60 0.5129654236788588,
-                  61 0.5111878153464557, 62 0.5095548723946172, 63 0.5080511322732747, 64 0.5066636288420379, 65 0.5053812832489833,
-                  66 0.5041944899897379, 67 0.5030948268798829, 68 0.5020748451557882, 69 0.5011279125587321, 70 0.5002480923767271,
-                  71 0.4994300476077867, 72 0.4986689632214493, 73 0.497960481866483, 74 0.49730064986463357, 75 0.4966858712829453,
-                  76 0.49611286849665337, 77 0.4955786480661386, 78 0.4950804710316717, 79 0.4946158269256998, 80 0.4941824109435533,
-                  81 0.4937781038179176, 82 0.493400954021864, 83 0.49304916198713356, 84 0.49272106607359456, 85 0.4924151300656507,
-                  86 0.4921299320041031, 87 0.4918641541891475, 88 0.4916165742129485, 89 0.4913860568994734, 90 0.49117154704555693,
-                  91 0.49097206287108747, 92 0.4907866900980997, 93 0.490614576588761, 94 0.49045492748104735, 95 0.49030700076845074,
-                  96 0.49017010327663496, 97 0.49004358699561806, 98 0.49004358699561806, 99 0.49004358699561806, 100 0.49004358699561806/
         iirf_horizon Time horizon for IIRF in yr                       /100/
         t1_0     three-layer "mixed layer" temperature change          /1.2346300299654787/
         t2_0     three-layer "mid-ocean" temperature change            /0.8370545540567685/
@@ -118,6 +95,11 @@ PARAMETERS
         EBM_B2   Forcing component to ocean layer                      /0.11763985620815469/
         EBM_B3   Forcing component to ocean layer                      /0.00551916378747874/
         fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /3.8633934258672795/
+        nonco2_i intercept of non-CO2 forcing equation                 /-0.159821747/
+        nonco2_e change in non-CO2 forcing with CO2 fossil emissions   /0.008696198/
+        nonco2_t change in non-CO2 forcing per period                  /0.017169587/
+        nonco2_q change in non-CO2 forcing per quantile                /0.010585466/
+        quantile non-CO2 forcing quantile                              /50/
 ** Climate damage parameters
         a10      Initial damage intercept                              /0/
         a20      Initial damage quadratic term
@@ -126,7 +108,7 @@ PARAMETERS
         a3       Damage exponent                                       /2.00/
 ** Abatement cost
         expcost2  Exponent of control cost function                    /2.6/
-        pback     Cost of backstop 2010$ per tCO2 2015                 /679/
+        pback     Cost of backstop 2020$ per tCO2 2015                 /679/
         gback     Initial cost decline backstop cost per period        /.025/
         limmiu    Upper limit on control rate after 2150               /1.2/
         tnopol    Period before which no emissions controls base       /45/
@@ -148,12 +130,9 @@ PARAMETERS
         sigma(t)      CO2-equivalent-emissions output ratio
         rr(t)         Average utility social discount rate
         ga(t)         Growth rate of productivity from
-        forcoth(t)    Exogenous forcing for other greenhouse gases
         gl(t)         Growth rate of labor
         gcost1        Growth of cost factor
         gsig(t)       Change in sigma (cumulative improvement of energy efficiency)
-*        etree(t)      Emissions from deforestation
-*        cumetree(t)   Cumulative from land
         cost1(t)      Adjusted cost for backstop
         pbacktime(t)  Backstop price
         optlrsav      Optimal long-run savings rate used for transversality
@@ -187,9 +166,6 @@ PARAMETERS
         pbacktime(t)=pback*(1-gback)**(t.val-1);
         cost1(t) = pbacktime(t)*sigma(t)/expcost2/1000;
 
-*        etree(t) = eland0*(1-deland)**(t.val-1);
-*        cumetree("1")= 190.9; loop(t,cumetree(t+1)=cumetree(t)+etree(t)*(5/3.664););
-
         rr(t) = 1/((1+prstp)**(tstep*(t.val-1)));
         optlrsav = (dk + .004)/(dk + .004*elasmu + prstp)*gama;
 
@@ -205,6 +181,7 @@ VARIABLES
         co2(t)          Carbon concentration increase in atmosphere (GtC from 1750)
         E(t)            Total CO2 emissions (GtCO2 per year)
         EIND(t)         Industrial emissions (GtCO2 per year)
+        nonco2(t)       Forcing from non-CO2 species
         C(t)            Consumption (trillions 2005 US dollars per year)
         K(t)            Capital stock (trillions 2005 US dollars)
         CPC(t)          Per capita consumption (thousands 2005 USD per year)
@@ -242,6 +219,8 @@ EQUATIONS
         EINDEQ(t)       Industrial emissions
         CCAEQ(t)       Cumulative industrial carbon emissions
         CCATOTEQ(t)     Cumulative total carbon emissions
+        nonco2eq1(t)     Radiative forcing from non-CO2 species
+        nonco2eq2(t)     Radiative forcing from non-CO2 species
         FORCEQ(t)        Radiative forcing equation
         DAMFRACEQ(t)    Equation for damage fraction
         DAMEQ(t)        Damage equation
@@ -286,13 +265,15 @@ EQUATIONS
  eindeq(t)..          EIND(t)        =E= sigma(t) * YGROSS(t) * (1-(MIU(t)));
  ccaeq(t+1)..         CCA(t+1)       =E= CCA(t)+ EIND(t)*tstep/3.664;
  ccatoteq(t)..        CCATOT(t)      =E= CCA(t)+cumetree(t);
- forceq(t)..          FORC(t)        =E= fco22x * ((log((CO2(t)/co2_1750))/log(2))) + forcoth(t);
+ nonco2eq1(tearly)..   nonco2(tearly)    =E= (nonco2_i + nonco2_e * eind(tearly) + nonco2_t * tearly.val + nonco2_q * quantile);
+ nonco2eq2(tlate)..    nonco2(tlate)  =E= (nonco2_i + nonco2_e * eind(tlate) + nonco2_t * 17 + nonco2_q * quantile);
+ forceq(t)..          FORC(t)        =E= fco22x * ((log((CO2(t)/co2_1750))/log(2))) + nonco2(t);
  damfraceq(t) ..      DAMFRAC(t)     =E= (a1*T1(t))+(a2*T1(t)**a3) ;
  dameq(t)..           DAMAGES(t)     =E= YGROSS(t) * DAMFRAC(t);
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
  mcabateeq(t)..       MCABATE(t)     =E= pbacktime(t) * MIU(t)**(expcost2-1);
  carbpriceeq(t)..     CPRICE(t)      =E= pbacktime(t) * (MIU(t))**(expcost2-1);
- etreeeq(t)..         etree(t)       =e= (4.64 - 0.25*sqrt(cprice(t))) * (1 - 1/(1+exp(-0.75*(t.val-22))));
+ etreeeq(t)..         etree(t)       =e= (4.64 - 0.25*sqrt(cprice(t)));
  cumetreeeq(t+1)..    cumetree(t+1)  =e= cumetree(t) + etree(t)*tstep/3.664;
 
 * Climate and carbon cycle
@@ -463,13 +444,13 @@ Loop (T, put sigma(t));
 put / "Forcings" ;
 Loop (T, put forc.l(t));
 put / "Other Forcings" ;
-Loop (T, put forcoth(t));
+Loop (T, put nonco2.l(t));
 put / "Period utilty" ;
 Loop (T, put periodu.l(t));
 put / "Consumption" ;
 Loop (T, put C.l(t));
 put / "Land emissions" ;
-Loop (T, put etree.l(t));
+Loop (T, put etree(t));
 put / "Cumulative ind emissions" ;
 Loop (T, put cca.l(t));
 put / "Cumulative total emissions" ;
