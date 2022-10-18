@@ -182,7 +182,7 @@ PARAMETERS
         a3       Damage exponent                                       /2.00/
 ** Abatement cost
         expcost2  Exponent of control cost function                    /2.6/
-        pback     Cost of backstop 2010$ per tCO2 2015                 /679/
+        pback     Cost of backstop 2020$ per tCO2 2015                 /679/
         gback     Initial cost decline backstop cost per period        /.025/
         limmiu    Upper limit on control rate after 2150               /1.2/
         tnopol    Period before which no emissions controls base       /45/
