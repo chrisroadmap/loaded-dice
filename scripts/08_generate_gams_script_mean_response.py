@@ -2,6 +2,7 @@
 
 import os
 
+import numpy as np
 import pandas as pd
 
 # should really import these constants from FaIR
@@ -12,19 +13,33 @@ here = os.path.dirname(os.path.realpath(__file__))
 df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
 configs = df_configs.index
 
-df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_ssp245.csv'), index_col=0)
+df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'nonco2_regression.csv'), index_col=0)
 df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'gas_partitions_ssp245.csv'), index_col=0)
 df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'climate_response_params.csv'), index_col=0)
 df_co2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'co2_forcing_ssp245.csv'), index_col=0)
 df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp245.csv'), index_col=0)
 
-df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'un-population', 'un-median-projections-20220928.csv'), index_col=0)
-pop = df_pop['population_bn'].values
+# Load RFF population scenarios and extend to 2500 using a growth rate that converges to zero
+df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'rff_population_gdp', 'population.csv'), index_col=0)
+data_pop = df_pop.loc[:, '2020':'2300'].values
+growth_pop = (df_pop.loc[:, '2255':'2300'].values/df_pop.loc[:, '2250':'2295'].values).mean(axis=1)
+data_ext_pop = np.ones((10000, 43))
+data_ext_pop[:, 0] = growth_pop * data_pop[:, -1]
+
+for period in range(1, 43):
+    data_ext_pop[:, period] = data_ext_pop[:, period-1] * ((42-period)/42*growth_pop + period/42)
+
+population_sample = np.concatenate((data_pop, data_ext_pop), axis=1)/1e6
+pop = np.median(population_sample, axis=0)
 
 t1 = df_temp['mixed_layer'].mean()
 t2 = df_temp['mid_ocean'].mean()
 t3 = df_temp['deep_ocean'].mean()
-nonco2 = df_nonco2.mean(axis=0)
+nonco2_i = df_nonco2.loc['Intercept', 'coefficient']
+nonco2_e = df_nonco2.loc['ffi', 'coefficient']
+nonco2_t = df_nonco2.loc['period', 'coefficient']
+nonco2_q = df_nonco2.loc['quantile', 'coefficient']
+quantile = 50  # change me each run
 cr = df_cr.mean(axis=0)
 f2x = df_co2['effective_f2x'].mean()
 r0 = df_configs['r0'].mean()
@@ -69,29 +84,29 @@ PARAMETERS
         dk       Depreciation rate on capital (per year)               /0.100/
         q0       Initial world gross output 2020 (trill 2020 USD)      /133.7/
         k0       Initial capital value 2019                            /318.7/
-        a0       Initial level of total factor productivity            /5.611213/
+        a0       Initial level of total factor productivity            /5.657/
         ga0      Initial growth rate for TFP per 5 years               /0.076/
         dela     Decline rate of TFP per 5 years                       /0.005/
         l(t)     /1 {pop[0]}, 2 {pop[1]}, 3 {pop[2]}, 4 {pop[3]}, 5 {pop[4]},
                   6 {pop[5]}, 7 {pop[6]}, 8 {pop[7]}, 9 {pop[8]}, 10 {pop[9]},
                  11 {pop[10]}, 12 {pop[11]}, 13 {pop[12]}, 14 {pop[13]}, 15 {pop[14]},
-                 16 {pop[15]}, 17 {pop[16]}, 18 {pop[16]}, 19 {pop[16]}, 20 {pop[16]},
-                 21 {pop[16]}, 22 {pop[16]}, 23 {pop[16]}, 24 {pop[16]}, 25 {pop[16]},
-                 26 {pop[16]}, 27 {pop[16]}, 28 {pop[16]}, 29 {pop[16]}, 30 {pop[16]},
-                 31 {pop[16]}, 32 {pop[16]}, 33 {pop[16]}, 34 {pop[16]}, 35 {pop[16]},
-                 36 {pop[16]}, 37 {pop[16]}, 38 {pop[16]}, 39 {pop[16]}, 40 {pop[16]},
-                 41 {pop[16]}, 42 {pop[16]}, 43 {pop[16]}, 44 {pop[16]}, 45 {pop[16]},
-                 46 {pop[16]}, 47 {pop[16]}, 48 {pop[16]}, 49 {pop[16]}, 50 {pop[16]},
-                 51 {pop[16]}, 52 {pop[16]}, 53 {pop[16]}, 54 {pop[16]}, 55 {pop[16]},
-                 56 {pop[16]}, 57 {pop[16]}, 58 {pop[16]}, 59 {pop[16]}, 60 {pop[16]},
-                 61 {pop[16]}, 62 {pop[16]}, 63 {pop[16]}, 64 {pop[16]}, 65 {pop[16]},
-                 66 {pop[16]}, 67 {pop[16]}, 68 {pop[16]}, 69 {pop[16]}, 70 {pop[16]},
-                 71 {pop[16]}, 72 {pop[16]}, 73 {pop[16]}, 74 {pop[16]}, 75 {pop[16]},
-                 76 {pop[16]}, 77 {pop[16]}, 78 {pop[16]}, 79 {pop[16]}, 80 {pop[16]},
-                 81 {pop[16]}, 82 {pop[16]}, 83 {pop[16]}, 84 {pop[16]}, 85 {pop[16]},
-                 86 {pop[16]}, 87 {pop[16]}, 88 {pop[16]}, 89 {pop[16]}, 90 {pop[16]},
-                 91 {pop[16]}, 92 {pop[16]}, 93 {pop[16]}, 94 {pop[16]}, 95 {pop[16]},
-                 96 {pop[16]}, 97 {pop[16]}, 98 {pop[16]}, 99 {pop[16]}, 100 {pop[16]}/
+                 16 {pop[15]}, 17 {pop[16]}, 18 {pop[17]}, 19 {pop[18]}, 20 {pop[19]},
+                 21 {pop[20]}, 22 {pop[21]}, 23 {pop[22]}, 24 {pop[23]}, 25 {pop[24]},
+                 26 {pop[25]}, 27 {pop[26]}, 28 {pop[27]}, 29 {pop[28]}, 30 {pop[29]},
+                 31 {pop[30]}, 32 {pop[31]}, 33 {pop[32]}, 34 {pop[33]}, 35 {pop[34]},
+                 36 {pop[35]}, 37 {pop[36]}, 38 {pop[37]}, 39 {pop[38]}, 40 {pop[39]},
+                 41 {pop[40]}, 42 {pop[41]}, 43 {pop[42]}, 44 {pop[43]}, 45 {pop[44]},
+                 46 {pop[45]}, 47 {pop[46]}, 48 {pop[47]}, 49 {pop[48]}, 50 {pop[49]},
+                 51 {pop[50]}, 52 {pop[51]}, 53 {pop[52]}, 54 {pop[53]}, 55 {pop[54]},
+                 56 {pop[55]}, 57 {pop[56]}, 58 {pop[57]}, 59 {pop[58]}, 60 {pop[59]},
+                 61 {pop[60]}, 62 {pop[61]}, 63 {pop[62]}, 64 {pop[63]}, 65 {pop[64]},
+                 66 {pop[65]}, 67 {pop[66]}, 68 {pop[67]}, 69 {pop[68]}, 70 {pop[69]},
+                 71 {pop[70]}, 72 {pop[71]}, 73 {pop[72]}, 74 {pop[73]}, 75 {pop[74]},
+                 76 {pop[75]}, 77 {pop[76]}, 78 {pop[77]}, 79 {pop[78]}, 80 {pop[79]},
+                 81 {pop[80]}, 82 {pop[81]}, 83 {pop[82]}, 84 {pop[83]}, 85 {pop[84]},
+                 86 {pop[85]}, 87 {pop[86]}, 88 {pop[87]}, 89 {pop[88]}, 90 {pop[89]},
+                 91 {pop[90]}, 92 {pop[91]}, 93 {pop[92]}, 94 {pop[93]}, 95 {pop[94]},
+                 96 {pop[95]}, 97 {pop[96]}, 98 {pop[97]}, 99 {pop[98]}, 100 {pop[99]}/
 ** Emissions parameters
         gsigma1  Initial growth of sigma (per year)                    /-0.0152/
         dsig     Decline rate of decarbonization (per period)          /-0.001/
@@ -118,26 +133,6 @@ PARAMETERS
         ICBOX2   Initial GtC concentration of carbon box 2 in 2020     /{cbox2}/
         ICBOX3   Initial GtC concentration of carbon box 3 in 2020     /{cbox3}/
         ICBOX4   Initial GtC concentration of carbon box 4 in 2020     /{cbox4}/
-        forcoth(t) /1 {nonco2[0]}, 2 {nonco2[1]}, 3 {nonco2[2]}, 4 {nonco2[3]}, 5 {nonco2[4]},
-                  6 {nonco2[5]}, 7 {nonco2[6]}, 8 {nonco2[7]}, 9 {nonco2[8]}, 10 {nonco2[9]},
-                  11 {nonco2[10]}, 12 {nonco2[11]}, 13 {nonco2[12]}, 14 {nonco2[13]}, 15 {nonco2[14]},
-                  16 {nonco2[15]}, 17 {nonco2[16]}, 18 {nonco2[17]}, 19 {nonco2[18]}, 20 {nonco2[19]},
-                  21 {nonco2[20]}, 22 {nonco2[21]}, 23 {nonco2[22]}, 24 {nonco2[23]}, 25 {nonco2[24]},
-                  26 {nonco2[25]}, 27 {nonco2[26]}, 28 {nonco2[27]}, 29 {nonco2[28]}, 30 {nonco2[29]},
-                  31 {nonco2[30]}, 32 {nonco2[31]}, 33 {nonco2[32]}, 34 {nonco2[33]}, 35 {nonco2[34]},
-                  36 {nonco2[35]}, 37 {nonco2[36]}, 38 {nonco2[37]}, 39 {nonco2[38]}, 40 {nonco2[39]},
-                  41 {nonco2[40]}, 42 {nonco2[41]}, 43 {nonco2[42]}, 44 {nonco2[43]}, 45 {nonco2[44]},
-                  46 {nonco2[45]}, 47 {nonco2[46]}, 48 {nonco2[47]}, 49 {nonco2[48]}, 50 {nonco2[49]},
-                  51 {nonco2[50]}, 52 {nonco2[51]}, 53 {nonco2[52]}, 54 {nonco2[53]}, 55 {nonco2[54]},
-                  56 {nonco2[55]}, 57 {nonco2[56]}, 58 {nonco2[57]}, 59 {nonco2[58]}, 60 {nonco2[59]},
-                  61 {nonco2[60]}, 62 {nonco2[61]}, 63 {nonco2[62]}, 64 {nonco2[63]}, 65 {nonco2[64]},
-                  66 {nonco2[65]}, 67 {nonco2[66]}, 68 {nonco2[67]}, 69 {nonco2[68]}, 70 {nonco2[69]},
-                  71 {nonco2[70]}, 72 {nonco2[71]}, 73 {nonco2[72]}, 74 {nonco2[73]}, 75 {nonco2[74]},
-                  76 {nonco2[75]}, 77 {nonco2[76]}, 78 {nonco2[77]}, 79 {nonco2[78]}, 80 {nonco2[79]},
-                  81 {nonco2[80]}, 82 {nonco2[81]}, 83 {nonco2[82]}, 84 {nonco2[83]}, 85 {nonco2[84]},
-                  86 {nonco2[85]}, 87 {nonco2[86]}, 88 {nonco2[87]}, 89 {nonco2[88]}, 90 {nonco2[89]},
-                  91 {nonco2[90]}, 92 {nonco2[91]}, 93 {nonco2[92]}, 94 {nonco2[93]}, 95 {nonco2[94]},
-                  96 {nonco2[95]}, 97 {nonco2[96]}, 98 {nonco2[96]}, 99 {nonco2[96]}, 100 {nonco2[96]}/
         iirf_horizon Time horizon for IIRF in yr                       /100/
         t1_0     three-layer "mixed layer" temperature change          /{t1}/
         t2_0     three-layer "mid-ocean" temperature change            /{t2}/
@@ -155,6 +150,11 @@ PARAMETERS
         EBM_B2   Forcing component to ocean layer                      /{cr[10]}/
         EBM_B3   Forcing component to ocean layer                      /{cr[11]}/
         fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /{f2x}/
+        nonco2_i intercept of non-CO2 forcing equation                 /{nonco2_i}/
+        nonco2_e change in non-CO2 forcing with CO2 fossil emissions   /{nonco2_e}/
+        nonco2_t change in non-CO2 forcing per period                  /{nonco2_t}/
+        nonco2_q change in non-CO2 forcing per quantile                /{nonco2_q}/
+        quantile non-CO2 forcing quantile                              /{quantile}/
 ** Climate damage parameters
         a10      Initial damage intercept                              /0/
         a20      Initial damage quadratic term
@@ -185,7 +185,6 @@ PARAMETERS
         sigma(t)      CO2-equivalent-emissions output ratio
         rr(t)         Average utility social discount rate
         ga(t)         Growth rate of productivity from
-        forcoth(t)    Exogenous forcing for other greenhouse gases
         gl(t)         Growth rate of labor
         gcost1        Growth of cost factor
         gsig(t)       Change in sigma (cumulative improvement of energy efficiency)
@@ -237,6 +236,7 @@ VARIABLES
         co2(t)          Carbon concentration increase in atmosphere (GtC from 1750)
         E(t)            Total CO2 emissions (GtCO2 per year)
         EIND(t)         Industrial emissions (GtCO2 per year)
+        nonco2(t)       Forcing from non-CO2 species
         C(t)            Consumption (trillions 2005 US dollars per year)
         K(t)            Capital stock (trillions 2005 US dollars)
         CPC(t)          Per capita consumption (thousands 2005 USD per year)
@@ -274,6 +274,8 @@ EQUATIONS
         EINDEQ(t)       Industrial emissions
         CCAEQ(t)       Cumulative industrial carbon emissions
         CCATOTEQ(t)     Cumulative total carbon emissions
+        nonco2eq1(t)     Radiative forcing from non-CO2 species
+        nonco2eq2(t)     Radiative forcing from non-CO2 species
         FORCEQ(t)        Radiative forcing equation
         DAMFRACEQ(t)    Equation for damage fraction
         DAMEQ(t)        Damage equation
@@ -318,7 +320,9 @@ EQUATIONS
  eindeq(t)..          EIND(t)        =E= sigma(t) * YGROSS(t) * (1-(MIU(t)));
  ccaeq(t+1)..         CCA(t+1)       =E= CCA(t)+ EIND(t)*tstep/3.664;
  ccatoteq(t)..        CCATOT(t)      =E= CCA(t)+cumetree(t);
- forceq(t)..          FORC(t)        =E= fco22x * ((log((CO2(t)/co2_1750))/log(2))) + forcoth(t);
+ nonco2eq1(tearly)..  nonco2(tearly) =E= (nonco2_i + nonco2_e * eind(tearly) + nonco2_t * tearly.val + nonco2_q * quantile);
+ nonco2eq2(tlate)..   nonco2(tlate)  =E= (nonco2_i + nonco2_e * eind(tlate) + nonco2_t * 17 + nonco2_q * quantile);
+ forceq(t)..          FORC(t)        =E= fco22x * ((log((CO2(t)/co2_1750))/log(2))) + nonco2(t);
  damfraceq(t) ..      DAMFRAC(t)     =E= (a1*T1(t))+(a2*T1(t)**a3) ;
  dameq(t)..           DAMAGES(t)     =E= YGROSS(t) * DAMFRAC(t);
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
@@ -495,13 +499,13 @@ Loop (T, put sigma(t));
 put / "Forcings" ;
 Loop (T, put forc.l(t));
 put / "Other Forcings" ;
-Loop (T, put forcoth(t));
+Loop (T, put nonco2.l(t));
 put / "Period utilty" ;
 Loop (T, put periodu.l(t));
 put / "Consumption" ;
 Loop (T, put C.l(t));
 put / "Land emissions" ;
-Loop (T, put etree(t));
+Loop (T, put etree.l(t));
 put / "Cumulative ind emissions" ;
 Loop (T, put cca.l(t));
 put / "Cumulative total emissions" ;

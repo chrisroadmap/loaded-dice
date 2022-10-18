@@ -29,29 +29,29 @@ PARAMETERS
         dk       Depreciation rate on capital (per year)               /0.100/
         q0       Initial world gross output 2020 (trill 2020 USD)      /133.7/
         k0       Initial capital value 2019                            /318.7/
-        a0       Initial level of total factor productivity            /5.611213/
+        a0       Initial level of total factor productivity            /5.656/
         ga0      Initial growth rate for TFP per 5 years               /0.076/
         dela     Decline rate of TFP per 5 years                       /0.005/
-        l(t)     /1 7.841, 2 8.192, 3 8.546, 4 8.879, 5 9.188,
-                  6 9.468, 7 9.709, 8 9.908, 9 10.068, 10 10.196,
-                 11 10.297, 12 10.371, 13 10.415, 14 10.431, 15 10.424,
-                 16 10.396, 17 10.349, 18 10.349, 19 10.349, 20 10.349,
-                 21 10.349, 22 10.349, 23 10.349, 24 10.349, 25 10.349,
-                 26 10.349, 27 10.349, 28 10.349, 29 10.349, 30 10.349,
-                 31 10.349, 32 10.349, 33 10.349, 34 10.349, 35 10.349,
-                 36 10.349, 37 10.349, 38 10.349, 39 10.349, 40 10.349,
-                 41 10.349, 42 10.349, 43 10.349, 44 10.349, 45 10.349,
-                 46 10.349, 47 10.349, 48 10.349, 49 10.349, 50 10.349,
-                 51 10.349, 52 10.349, 53 10.349, 54 10.349, 55 10.349,
-                 56 10.349, 57 10.349, 58 10.349, 59 10.349, 60 10.349,
-                 61 10.349, 62 10.349, 63 10.349, 64 10.349, 65 10.349,
-                 66 10.349, 67 10.349, 68 10.349, 69 10.349, 70 10.349,
-                 71 10.349, 72 10.349, 73 10.349, 74 10.349, 75 10.349,
-                 76 10.349, 77 10.349, 78 10.349, 79 10.349, 80 10.349,
-                 81 10.349, 82 10.349, 83 10.349, 84 10.349, 85 10.349,
-                 86 10.349, 87 10.349, 88 10.349, 89 10.349, 90 10.349,
-                 91 10.349, 92 10.349, 93 10.349, 94 10.349, 95 10.349,
-                 96 10.349, 97 10.349, 98 10.349, 99 10.349, 100 10.349/
+        l(t)     /1 7.752698915999999, 2 8.14501447446709, 3 8.514264439238291, 4 8.851171048047874, 5 9.160805469777193,
+                  6 9.443190102601223, 7 9.696205729551343, 8 9.924312962725988, 9 10.1235280089845, 10 10.29655254704842,
+                 11 10.446114240546027, 12 10.577151930864575, 13 10.69672242725059, 14 10.802836907197488, 15 10.892777138932376,
+                 16 10.97441664735782, 17 11.027833874574439, 18 11.088841944758256, 19 11.122549645864144, 20 11.148017580095328,
+                 21 11.157324625053421, 22 11.172117316134777, 23 11.182142206294424, 24 11.169412682818685, 25 11.142629933116396,
+                 26 11.116998728164878, 27 11.088723841450147, 28 11.05115858627234, 29 11.02205639000708, 30 10.939823540726353,
+                 31 10.868377771775208, 32 10.792557027171881, 33 10.701633030064261, 34 10.606255631421268, 35 10.489725006178455,
+                 36 10.394377066405719, 37 10.280836858083662, 38 10.180553974334368, 39 10.08030953089341, 40 9.929925720534952,
+                 41 9.822382252063436, 42 9.686034776542154, 43 9.530377328345775, 44 9.388706123064578, 45 9.244220068798658,
+                 46 9.073130986446273, 47 8.93002080192914, 48 8.72914878001665, 49 8.582313506050513, 50 8.3887527173362,
+                 51 8.252671482044136, 52 8.128437203454254, 53 7.948013848638106, 54 7.77978011325613, 55 7.5981793053525255,
+                 56 7.440134526590741, 57 7.303497749693029, 58 7.212186062493577, 59 7.065115310826582, 60 6.959244141597544,
+                 61 6.822626293068621, 62 6.6975574796010635, 63 6.578123629290501, 64 6.466998205985376, 65 6.350788991834326,
+                 66 6.2675317054356645, 67 6.178043698130286, 68 6.109378900494941, 69 6.046847533102705, 70 5.989084145464406,
+                 71 5.896942424664613, 72 5.838078741820963, 73 5.768980668470196, 74 5.69520012860349, 75 5.6355584252569715,
+                 76 5.574713099792021, 77 5.516546578050418, 78 5.44356701288864, 79 5.383449787086264, 80 5.338821988347904,
+                 81 5.290319253858154, 82 5.246486909426832, 83 5.200206967292477, 84 5.1633241426111915, 85 5.1404253544505805,
+                 86 5.104915636293876, 87 5.075824595714507, 88 5.049124354407201, 89 5.024777879641999, 90 5.00473099716016,
+                 91 4.9898701739085105, 92 4.976699777294193, 93 4.965206097266192, 94 4.955377124072447, 95 4.947202527361643,
+                 96 4.94067363811745, 97 4.935783433381051, 98 4.932526523724367, 99 4.930899143442817, 100 4.930899143442817/
 ** Emissions parameters
         gsigma1  Initial growth of sigma (per year)                    /-0.0152/
         dsig     Decline rate of decarbonization (per period)          /-0.001/
@@ -95,10 +95,10 @@ PARAMETERS
         EBM_B2   Forcing component to ocean layer                      /0.11763985620815469/
         EBM_B3   Forcing component to ocean layer                      /0.00551916378747874/
         fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /3.8633934258672795/
-        nonco2_i intercept of non-CO2 forcing equation                 /-0.159821747/
-        nonco2_e change in non-CO2 forcing with CO2 fossil emissions   /0.008696198/
-        nonco2_t change in non-CO2 forcing per period                  /0.017169587/
-        nonco2_q change in non-CO2 forcing per quantile                /0.010585466/
+        nonco2_i intercept of non-CO2 forcing equation                 /-0.1598217469526228/
+        nonco2_e change in non-CO2 forcing with CO2 fossil emissions   /0.0086961981397482/
+        nonco2_t change in non-CO2 forcing per period                  /0.0171695869940109/
+        nonco2_q change in non-CO2 forcing per quantile                /0.010585466099088/
         quantile non-CO2 forcing quantile                              /50/
 ** Climate damage parameters
         a10      Initial damage intercept                              /0/
@@ -265,15 +265,15 @@ EQUATIONS
  eindeq(t)..          EIND(t)        =E= sigma(t) * YGROSS(t) * (1-(MIU(t)));
  ccaeq(t+1)..         CCA(t+1)       =E= CCA(t)+ EIND(t)*tstep/3.664;
  ccatoteq(t)..        CCATOT(t)      =E= CCA(t)+cumetree(t);
- nonco2eq1(tearly)..   nonco2(tearly)    =E= (nonco2_i + nonco2_e * eind(tearly) + nonco2_t * tearly.val + nonco2_q * quantile);
- nonco2eq2(tlate)..    nonco2(tlate)  =E= (nonco2_i + nonco2_e * eind(tlate) + nonco2_t * 17 + nonco2_q * quantile);
+ nonco2eq1(tearly)..  nonco2(tearly) =E= (nonco2_i + nonco2_e * eind(tearly) + nonco2_t * tearly.val + nonco2_q * quantile);
+ nonco2eq2(tlate)..   nonco2(tlate)  =E= (nonco2_i + nonco2_e * eind(tlate) + nonco2_t * 17 + nonco2_q * quantile);
  forceq(t)..          FORC(t)        =E= fco22x * ((log((CO2(t)/co2_1750))/log(2))) + nonco2(t);
  damfraceq(t) ..      DAMFRAC(t)     =E= (a1*T1(t))+(a2*T1(t)**a3) ;
  dameq(t)..           DAMAGES(t)     =E= YGROSS(t) * DAMFRAC(t);
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
  mcabateeq(t)..       MCABATE(t)     =E= pbacktime(t) * MIU(t)**(expcost2-1);
  carbpriceeq(t)..     CPRICE(t)      =E= pbacktime(t) * (MIU(t))**(expcost2-1);
- etreeeq(t)..         etree(t)       =e= (4.64 - 0.25*sqrt(cprice(t)));
+ etreeeq(t)..         etree(t)       =e= (4.64 - 0.25*sqrt(cprice(t))) * (1 - 1/(1+exp(-0.75*(t.val-22))));
  cumetreeeq(t+1)..    cumetree(t+1)  =e= cumetree(t) + etree(t)*tstep/3.664;
 
 * Climate and carbon cycle
@@ -450,7 +450,7 @@ Loop (T, put periodu.l(t));
 put / "Consumption" ;
 Loop (T, put C.l(t));
 put / "Land emissions" ;
-Loop (T, put etree(t));
+Loop (T, put etree.l(t));
 put / "Cumulative ind emissions" ;
 Loop (T, put cca.l(t));
 put / "Cumulative total emissions" ;
