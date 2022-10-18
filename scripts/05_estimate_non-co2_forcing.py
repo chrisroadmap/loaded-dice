@@ -144,17 +144,20 @@ non_co2_smoothed_95 = savgol_filter(
 pl.plot(
     np.arange(2014, 2101),
     non_co2_smoothed_05[14:, :],
-    color='b'
+    color='b',
+    alpha=0.1
 )
 pl.plot(
     np.arange(2014, 2101),
     non_co2_smoothed_50[14:, :],
-    color='k'
+    color='k',
+    alpha=0.1
 )
 pl.plot(
     np.arange(2014, 2101),
     non_co2_smoothed_95[14:, :],
-    color='r'
+    color='r',
+    alpha=0.1
 )
 pl.show()
 

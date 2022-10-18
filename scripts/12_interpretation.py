@@ -11,7 +11,7 @@ here = os.path.dirname(os.path.realpath(__file__))
 
 os.makedirs(os.path.join(here, '..', 'figures'), exist_ok=True)
 
-ensemble_size=11
+ensemble_size=1001
 
 df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
 configs = df_configs.index
@@ -31,7 +31,7 @@ pl.rcParams['axes.spines.top'] = True
 pl.rcParams['axes.spines.bottom'] = True
 pl.rcParams['figure.dpi'] = 150
 
-for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
+for scenario in ['dice_1p5deglowOS']:
     dfs = []
     outputs = {}
     outputs['CO2'] = np.ones((100, ensemble_size)) * np.nan

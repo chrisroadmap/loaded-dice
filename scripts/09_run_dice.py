@@ -36,7 +36,7 @@ quantiles = ranks/10
 #df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'un-population', 'un-median-projections-20220928.csv'), index_col=0)
 #pop = df_pop['population_bn'].values
 
-n_configs = 11
+n_configs = 1001
 
 # Load RFF population scenarios and extend to 2500 using a growth rate that converges to zero
 df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'rff_population_gdp', 'population.csv'), index_col=0)
@@ -386,7 +386,8 @@ CCA.lo(t)             = 0;
 
 * Control rate limits
 MIU.up(t)             = limmiu;
-MIU.up(t)$(t.val<8)  = 1;
+MIU.up(t)$(t.val<7)  = 1;
+MIU.up(t)$(t.val=2)  = 0.3;
 
 ** Upper and lower bounds for stability
 K.LO(t)         = 1;
