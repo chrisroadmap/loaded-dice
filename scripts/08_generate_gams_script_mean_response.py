@@ -84,7 +84,7 @@ PARAMETERS
         dk       Depreciation rate on capital (per year)               /0.100/
         q0       Initial world gross output 2020 (trill 2020 USD)      /133.7/
         k0       Initial capital value 2019                            /318.7/
-        a0       Initial level of total factor productivity            /5.657/
+        a0       Initial level of total factor productivity            /5.517123167924143/
         ga0      Initial growth rate for TFP per 5 years               /0.076/
         dela     Decline rate of TFP per 5 years                       /0.005/
         l(t)     /1 {pop[0]}, 2 {pop[1]}, 3 {pop[2]}, 4 {pop[3]}, 5 {pop[4]},
@@ -110,7 +110,7 @@ PARAMETERS
 ** Emissions parameters
         gsigma1  Initial growth of sigma (per year)                    /-0.0152/
         dsig     Decline rate of decarbonization (per period)          /-0.001/
-        e0       Industrial emissions 2020 (GtCO2 per year)            /37.39/
+        e0       Industrial emissions 2020 (GtCO2 per year)            /36.70/
 * projections from RCMIP (should use GCP; TODO)
         miu0     Initial emissions control rate for base case 2015     /0.15/
 * Initial Conditions

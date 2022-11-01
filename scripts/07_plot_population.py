@@ -1,8 +1,24 @@
 import os
 
 import matplotlib.pyplot as pl
+from matplotlib.ticker import StrMethodFormatter
 import numpy as np
 import pandas as pd
+
+pl.rcParams['figure.figsize'] = (12/2.54, 12/2.54)
+pl.rcParams['font.size'] = 9
+pl.rcParams['font.family'] = 'Arial'
+pl.rcParams['ytick.direction'] = 'in'
+pl.rcParams['ytick.minor.visible'] = True
+pl.rcParams['ytick.major.right'] = True
+pl.rcParams['ytick.right'] = True
+pl.rcParams['xtick.direction'] = 'in'
+pl.rcParams['xtick.minor.visible'] = True
+pl.rcParams['xtick.major.top'] = True
+pl.rcParams['xtick.top'] = True
+pl.rcParams['axes.spines.top'] = True
+pl.rcParams['axes.spines.bottom'] = True
+pl.rcParams['figure.dpi'] = 150
 
 here = os.path.dirname(os.path.realpath(__file__))
 
@@ -20,5 +36,18 @@ for period in range(1, 43):
 
 data_combined = np.concatenate((data, data_ext), axis=1)
 
-pl.plot(np.arange(2020, 2520, 5), data_combined.T)
+fig, ax = pl.subplots()
+
+ax.semilogy(np.arange(2020, 2520, 5), data_combined.T/1e6, zorder=-7)
+ax.set_ylabel('Population (billions)')
+ax.set_xlim(2020, 2515)
+ax.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+ax.set_ylim(0.1, 300)
+ax.set_title('Population projections')
+
+
+fig.tight_layout()
+pl.savefig(os.path.join(here, '..', 'figures', 'population.png'))
+pl.savefig(os.path.join(here, '..', 'figures', 'population.pdf'))
+
 pl.show()
