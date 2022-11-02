@@ -27,8 +27,8 @@ PARAMETERS
 ** Technology and population (updated by CS)
         gama     Capital elasticity in production function             /0.300/
         dk       Depreciation rate on capital (per year)               /0.100/
-        q0       Initial world gross output 2020 (trill 2020 USD)      /133.7/
-        k0       Initial capital value 2019                            /318.7/
+        q0       Initial world gross output 2020 (trill 2020 USD)      /133.09357438648962/
+        k0       Initial capital value 2019                            /341.0027556142761/
         a0       Initial level of total factor productivity            /5.517123167924143/
         ga0      Initial growth rate for TFP per 5 years               /0.076/
         dela     Decline rate of TFP per 5 years                       /0.005/
@@ -59,46 +59,46 @@ PARAMETERS
 * projections from RCMIP (should use GCP; TODO)
         miu0     Initial emissions control rate for base case 2015     /0.15/
 * Initial Conditions
-        co2_2020 Initial concentration in atmosphere 2020 (GtC)        /877.7022268325069/
-        co2_1750 Pre-industrial concentration atmosphere  (GtC)        /591.9851790277361/
+        co2_2020 Initial concentration in atmosphere 2020 (GtC)        /877.7022270912074/
+        co2_1750 Pre-industrial concentration atmosphere  (GtC)        /591.9851790277355/
 * These are for declaration and are defined later
         sig0     Carbon intensity 2010 (kgCO2 per output 2005 USD 2010)
 ** Climate model parameters
         g0       Carbon cycle parameter (Leach et al. 2021)
         g1       Carbon cycle parameter (Leach et al. 2021)
-        r0       Pre-industrial time-integrated airborne fraction      /33.707991262815234/
-        ru       Sensitivity of airborne fraction with CO2 uptake      /0.003426378858380946/
-        rt       Sensitivity of airborne fraction with temperature     /2.366547319648426/
+        r0       Pre-industrial time-integrated airborne fraction      /33.707991262815256/
+        ru       Sensitivity of airborne fraction with CO2 uptake      /0.003426378858380945/
+        rt       Sensitivity of airborne fraction with temperature     /2.3665473196484275/
         ra       Sensitivity of airborne fraction with CO2 airborne    /0.0016877120877617834/
         tau(box) Lifetimes of the four atmospheric carbon boxes
                      / 1 1e9, 2 394.4, 3 36.54, 4 4.304 /
         a(box)   Partition fraction of the four atmospheric carbon boxes
                      / 1 0.2173, 2 0.2240, 3 0.2824, 4 0.2763 /
-        ICBOX1   Initial GtC concentration of carbon box 1 in 2020     /142.1996838289708/
-        ICBOX2   Initial GtC concentration of carbon box 2 in 2020     /101.89205189688768/
-        ICBOX3   Initial GtC concentration of carbon box 3 in 2020     /36.316002587200686/
-        ICBOX4   Initial GtC concentration of carbon box 4 in 2020     /5.309309491712026/
+        ICBOX1   Initial GtC concentration of carbon box 1 in 2020     /142.19968408720618/
+        ICBOX2   Initial GtC concentration of carbon box 2 in 2020     /101.89205189742611/
+        ICBOX3   Initial GtC concentration of carbon box 3 in 2020     /36.31600258734868/
+        ICBOX4   Initial GtC concentration of carbon box 4 in 2020     /5.3093094914908034/
         iirf_horizon Time horizon for IIRF in yr                       /100/
-        t1_0     three-layer "mixed layer" temperature change          /1.234630029965478/
-        t2_0     three-layer "mid-ocean" temperature change            /0.8370545540567681/
-        t3_0     three-layer "deep-ocean" temperature change           /0.27964187498051357/
-        EBM_A11  Fast component of mixed layer temperature             /0.07790134885533422/
-        EBM_A12  Intermediate component of mixed layer temperature     /0.36529270554362936/
-        EBM_A13  Slow component of mixed layer temperature             /0.13965825404191437/
-        EBM_A21  Fast component of mid ocean temperature               /0.08189096365651427/
+        t1_0     three-layer "mixed layer" temperature change          /1.234630030608191/
+        t2_0     three-layer "mid-ocean" temperature change            /0.837054554415475/
+        t3_0     three-layer "deep-ocean" temperature change           /0.27964187504557875/
+        EBM_A11  Fast component of mixed layer temperature             /0.07790134885533427/
+        EBM_A12  Intermediate component of mixed layer temperature     /0.36529270554362925/
+        EBM_A13  Slow component of mixed layer temperature             /0.13965825404191443/
+        EBM_A21  Fast component of mid ocean temperature               /0.08189096365651416/
         EBM_A22  Intermediate component of mid ocean temperature       /0.528413520955148/
-        EBM_A23  Slow component of mid ocean temperature               /0.2365989107612783/
-        EBM_A31  Fast component of deep ocean temperature              /0.008316076511537769/
-        EBM_A32  Intermediate component of deep ocean temperature      /0.07334669905622328/
-        EBM_A33  Slow component of deep ocean temperature              /0.9109931044425422/
-        EBM_B1   Forcing contribution to mixed layer                   /0.3161368340237161/
-        EBM_B2   Forcing component to ocean layer                      /0.11763985620815473/
-        EBM_B3   Forcing component to ocean layer                      /0.005519163787478743/
-        fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /3.863393425867278/
-        nonco2_i intercept of non-CO2 forcing equation                 /-0.1598217469526228/
+        EBM_A23  Slow component of mid ocean temperature               /0.2365989107612785/
+        EBM_A31  Fast component of deep ocean temperature              /0.008316076511537767/
+        EBM_A32  Intermediate component of deep ocean temperature      /0.07334669905622317/
+        EBM_A33  Slow component of deep ocean temperature              /0.9109931044425426/
+        EBM_B1   Forcing contribution to mixed layer                   /0.3161368340237162/
+        EBM_B2   Forcing component to ocean layer                      /0.11763985620815468/
+        EBM_B3   Forcing component to ocean layer                      /0.005519163787478726/
+        fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /3.8633934259285456/
+        nonco2_i intercept of non-CO2 forcing equation                 /-0.159821746952629/
         nonco2_e change in non-CO2 forcing with CO2 fossil emissions   /0.0086961981397482/
-        nonco2_t change in non-CO2 forcing per period                  /0.0171695869940109/
-        nonco2_q change in non-CO2 forcing per quantile                /0.010585466099088/
+        nonco2_t change in non-CO2 forcing per period                  /0.0171695869940111/
+        nonco2_q change in non-CO2 forcing per quantile                /0.0105854660990881/
         quantile non-CO2 forcing quantile                              /50/
 ** Climate damage parameters
         a10      Initial damage intercept                              /0/
@@ -273,7 +273,7 @@ EQUATIONS
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
  mcabateeq(t)..       MCABATE(t)     =E= pbacktime(t) * MIU(t)**(expcost2-1);
  carbpriceeq(t)..     CPRICE(t)      =E= pbacktime(t) * (MIU(t))**(expcost2-1);
- etreeeq(t)..         etree(t)       =e= (4.64 - 0.25*sqrt(cprice(t))) * (1 - 1/(1+exp(-0.75*(t.val-22))));
+ etreeeq(t)..         etree(t)       =e= (5.26 - 0.25*sqrt(cprice(t))) * (1 - 1/(1+exp(-0.75*(t.val-22))));
  cumetreeeq(t+1)..    cumetree(t+1)  =e= cumetree(t) + etree(t)*tstep/3.664;
 
 * Climate and carbon cycle
