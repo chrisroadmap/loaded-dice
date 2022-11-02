@@ -13,11 +13,12 @@ here = os.path.dirname(os.path.realpath(__file__))
 df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
 configs = df_configs.index
 
-df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'nonco2_regression.csv'), index_col=0)
+df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_ssp245.csv'), index_col=0)
 df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'gas_partitions_ssp245.csv'), index_col=0)
 df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'climate_response_params.csv'), index_col=0)
 df_co2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'co2_forcing_ssp245.csv'), index_col=0)
 df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp245.csv'), index_col=0)
+df_afolu = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'afolu_regression.csv'), index_col=0)
 
 # Load RFF population scenarios and extend to 2500 using a growth rate that converges to zero
 df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'rff_population_gdp', 'population.csv'), index_col=0)
@@ -35,11 +36,7 @@ pop = np.median(population_sample, axis=0)
 t1 = df_temp['mixed_layer'].mean()
 t2 = df_temp['mid_ocean'].mean()
 t3 = df_temp['deep_ocean'].mean()
-nonco2_i = df_nonco2.loc['Intercept', 'coefficient']
-nonco2_e = df_nonco2.loc['ffi', 'coefficient']
-nonco2_t = df_nonco2.loc['period', 'coefficient']
-nonco2_q = df_nonco2.loc['quantile', 'coefficient']
-quantile = 50  # change me each run
+nonco2 = np.median(df_nonco2.values, axis=0)
 cr = df_cr.mean(axis=0)
 f2x = df_co2['effective_f2x'].mean()
 r0 = df_configs['r0'].mean()
@@ -52,6 +49,9 @@ cbox3 = df_cbox['mid'].mean()
 cbox4 = df_cbox['fast'].mean()
 co2_2020 = df_cbox['co2_2020'].mean()
 co2_1750 = df_configs['co2_concentration_1750'].mean()
+afolu_const = df_afolu.loc['constant', 'coefficient']
+afolu_ffi = df_afolu.loc['CO2_EIP', 'coefficient']
+afolu_period = df_afolu.loc['period', 'coefficient']
 
 template = f'''
 $ontext
@@ -150,11 +150,26 @@ PARAMETERS
         EBM_B2   Forcing component to ocean layer                      /{cr[10]}/
         EBM_B3   Forcing component to ocean layer                      /{cr[11]}/
         fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /{f2x}/
-        nonco2_i intercept of non-CO2 forcing equation                 /{nonco2_i}/
-        nonco2_e change in non-CO2 forcing with CO2 fossil emissions   /{nonco2_e}/
-        nonco2_t change in non-CO2 forcing per period                  /{nonco2_t}/
-        nonco2_q change in non-CO2 forcing per quantile                /{nonco2_q}/
-        quantile non-CO2 forcing quantile                              /{quantile}/
+        nonco2(t)   /1 {nonco2[0]}, 2 {nonco2[1]}, 3 {nonco2[2]}, 4 {nonco2[3]}, 5 {nonco2[4]},
+                  6 {nonco2[5]}, 7 {nonco2[6]}, 8 {nonco2[7]}, 9 {nonco2[8]}, 10 {nonco2[9]},
+                 11 {nonco2[10]}, 12 {nonco2[11]}, 13 {nonco2[12]}, 14 {nonco2[13]}, 15 {nonco2[14]},
+                 16 {nonco2[15]}, 17 {nonco2[16]}, 18 {nonco2[17]}, 19 {nonco2[18]}, 20 {nonco2[19]},
+                 21 {nonco2[20]}, 22 {nonco2[21]}, 23 {nonco2[22]}, 24 {nonco2[23]}, 25 {nonco2[24]},
+                 26 {nonco2[25]}, 27 {nonco2[26]}, 28 {nonco2[27]}, 29 {nonco2[28]}, 30 {nonco2[29]},
+                 31 {nonco2[30]}, 32 {nonco2[31]}, 33 {nonco2[32]}, 34 {nonco2[33]}, 35 {nonco2[34]},
+                 36 {nonco2[35]}, 37 {nonco2[36]}, 38 {nonco2[37]}, 39 {nonco2[38]}, 40 {nonco2[39]},
+                 41 {nonco2[40]}, 42 {nonco2[41]}, 43 {nonco2[42]}, 44 {nonco2[43]}, 45 {nonco2[44]},
+                 46 {nonco2[45]}, 47 {nonco2[46]}, 48 {nonco2[47]}, 49 {nonco2[48]}, 50 {nonco2[49]},
+                 51 {nonco2[50]}, 52 {nonco2[51]}, 53 {nonco2[52]}, 54 {nonco2[53]}, 55 {nonco2[54]},
+                 56 {nonco2[55]}, 57 {nonco2[56]}, 58 {nonco2[57]}, 59 {nonco2[58]}, 60 {nonco2[59]},
+                 61 {nonco2[60]}, 62 {nonco2[61]}, 63 {nonco2[62]}, 64 {nonco2[63]}, 65 {nonco2[64]},
+                 66 {nonco2[65]}, 67 {nonco2[66]}, 68 {nonco2[67]}, 69 {nonco2[68]}, 70 {nonco2[69]},
+                 71 {nonco2[70]}, 72 {nonco2[71]}, 73 {nonco2[72]}, 74 {nonco2[73]}, 75 {nonco2[74]},
+                 76 {nonco2[75]}, 77 {nonco2[76]}, 78 {nonco2[77]}, 79 {nonco2[78]}, 80 {nonco2[79]},
+                 81 {nonco2[80]}, 82 {nonco2[81]}, 83 {nonco2[82]}, 84 {nonco2[83]}, 85 {nonco2[84]},
+                 86 {nonco2[85]}, 87 {nonco2[86]}, 88 {nonco2[87]}, 89 {nonco2[88]}, 90 {nonco2[89]},
+                 91 {nonco2[90]}, 92 {nonco2[91]}, 93 {nonco2[92]}, 94 {nonco2[93]}, 95 {nonco2[94]},
+                 96 {nonco2[95]}, 97 {nonco2[96]}, 98 {nonco2[96]}, 99 {nonco2[96]}, 100 {nonco2[96]}/
 ** Climate damage parameters
         a10      Initial damage intercept                              /0/
         a20      Initial damage quadratic term
@@ -236,7 +251,6 @@ VARIABLES
         co2(t)          Carbon concentration increase in atmosphere (GtC from 1750)
         E(t)            Total CO2 emissions (GtCO2 per year)
         EIND(t)         Industrial emissions (GtCO2 per year)
-        nonco2(t)       Forcing from non-CO2 species
         C(t)            Consumption (trillions 2005 US dollars per year)
         K(t)            Capital stock (trillions 2005 US dollars)
         CPC(t)          Per capita consumption (thousands 2005 USD per year)
@@ -274,8 +288,6 @@ EQUATIONS
         EINDEQ(t)       Industrial emissions
         CCAEQ(t)       Cumulative industrial carbon emissions
         CCATOTEQ(t)     Cumulative total carbon emissions
-        nonco2eq1(t)     Radiative forcing from non-CO2 species
-        nonco2eq2(t)     Radiative forcing from non-CO2 species
         FORCEQ(t)        Radiative forcing equation
         DAMFRACEQ(t)    Equation for damage fraction
         DAMEQ(t)        Damage equation
@@ -320,15 +332,13 @@ EQUATIONS
  eindeq(t)..          EIND(t)        =E= sigma(t) * YGROSS(t) * (1-(MIU(t)));
  ccaeq(t+1)..         CCA(t+1)       =E= CCA(t)+ EIND(t)*tstep/3.664;
  ccatoteq(t)..        CCATOT(t)      =E= CCA(t)+cumetree(t);
- nonco2eq1(tearly)..  nonco2(tearly) =E= (nonco2_i + nonco2_e * eind(tearly) + nonco2_t * tearly.val + nonco2_q * quantile);
- nonco2eq2(tlate)..   nonco2(tlate)  =E= (nonco2_i + nonco2_e * eind(tlate) + nonco2_t * 17 + nonco2_q * quantile);
  forceq(t)..          FORC(t)        =E= fco22x * ((log((CO2(t)/co2_1750))/log(2))) + nonco2(t);
  damfraceq(t) ..      DAMFRAC(t)     =E= (a1*T1(t))+(a2*T1(t)**a3) ;
  dameq(t)..           DAMAGES(t)     =E= YGROSS(t) * DAMFRAC(t);
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
  mcabateeq(t)..       MCABATE(t)     =E= pbacktime(t) * MIU(t)**(expcost2-1);
  carbpriceeq(t)..     CPRICE(t)      =E= pbacktime(t) * (MIU(t))**(expcost2-1);
- etreeeq(t)..         etree(t)       =e= (5.26 - 0.25*sqrt(cprice(t))) * (1 - 1/(1+exp(-0.75*(t.val-22))));
+ etreeeq(t)..         etree(t)       =e= ({afolu_const} + {afolu_ffi}*EIND(t) + {afolu_period}*t.val) * (1 - 1/(1+exp(-0.75*(t.val-22))));
  cumetreeeq(t+1)..    cumetree(t+1)  =e= cumetree(t) + etree(t)*tstep/3.664;
 
 * Climate and carbon cycle

@@ -59,7 +59,7 @@ PARAMETERS
 * projections from RCMIP (should use GCP; TODO)
         miu0     Initial emissions control rate for base case 2015     /0.15/
 * Initial Conditions
-        co2_2020 Initial concentration in atmosphere 2020 (GtC)        /877.7022270912074/
+        co2_2020 Initial concentration in atmosphere 2020 (GtC)        /877.7022268325067/
         co2_1750 Pre-industrial concentration atmosphere  (GtC)        /591.9851790277355/
 * These are for declaration and are defined later
         sig0     Carbon intensity 2010 (kgCO2 per output 2005 USD 2010)
@@ -74,14 +74,14 @@ PARAMETERS
                      / 1 1e9, 2 394.4, 3 36.54, 4 4.304 /
         a(box)   Partition fraction of the four atmospheric carbon boxes
                      / 1 0.2173, 2 0.2240, 3 0.2824, 4 0.2763 /
-        ICBOX1   Initial GtC concentration of carbon box 1 in 2020     /142.19968408720618/
-        ICBOX2   Initial GtC concentration of carbon box 2 in 2020     /101.89205189742611/
-        ICBOX3   Initial GtC concentration of carbon box 3 in 2020     /36.31600258734868/
-        ICBOX4   Initial GtC concentration of carbon box 4 in 2020     /5.3093094914908034/
+        ICBOX1   Initial GtC concentration of carbon box 1 in 2020     /142.19968382897068/
+        ICBOX2   Initial GtC concentration of carbon box 2 in 2020     /101.89205189688752/
+        ICBOX3   Initial GtC concentration of carbon box 3 in 2020     /36.31600258720073/
+        ICBOX4   Initial GtC concentration of carbon box 4 in 2020     /5.309309491712028/
         iirf_horizon Time horizon for IIRF in yr                       /100/
-        t1_0     three-layer "mixed layer" temperature change          /1.234630030608191/
-        t2_0     three-layer "mid-ocean" temperature change            /0.837054554415475/
-        t3_0     three-layer "deep-ocean" temperature change           /0.27964187504557875/
+        t1_0     three-layer "mixed layer" temperature change          /1.2346300299654787/
+        t2_0     three-layer "mid-ocean" temperature change            /0.8370545540567685/
+        t3_0     three-layer "deep-ocean" temperature change           /0.2796418749805141/
         EBM_A11  Fast component of mixed layer temperature             /0.07790134885533427/
         EBM_A12  Intermediate component of mixed layer temperature     /0.36529270554362925/
         EBM_A13  Slow component of mixed layer temperature             /0.13965825404191443/
@@ -92,14 +92,29 @@ PARAMETERS
         EBM_A32  Intermediate component of deep ocean temperature      /0.07334669905622317/
         EBM_A33  Slow component of deep ocean temperature              /0.9109931044425426/
         EBM_B1   Forcing contribution to mixed layer                   /0.3161368340237162/
-        EBM_B2   Forcing component to ocean layer                      /0.11763985620815468/
-        EBM_B3   Forcing component to ocean layer                      /0.005519163787478726/
-        fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /3.8633934259285456/
-        nonco2_i intercept of non-CO2 forcing equation                 /-0.159821746952629/
-        nonco2_e change in non-CO2 forcing with CO2 fossil emissions   /0.0086961981397482/
-        nonco2_t change in non-CO2 forcing per period                  /0.0171695869940111/
-        nonco2_q change in non-CO2 forcing per quantile                /0.0105854660990881/
-        quantile non-CO2 forcing quantile                              /50/
+        EBM_B2   Forcing component to ocean layer                      /0.11763985620815469/
+        EBM_B3   Forcing component to ocean layer                      /0.00551916378747874/
+        fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /3.8633934258672795/
+        nonco2(t)   /1 0.5487648611160071, 2 0.6277996862744217, 3 0.6483240142257521, 4 0.6918405478357093, 5 0.7408862970901684,
+                  6 0.7845687916920466, 7 0.8291958707637194, 8 0.8599012545188927, 9 0.8725489134986013, 10 0.8798256221456182,
+                 11 0.8962575122151043, 12 0.910817902457992, 13 0.9292868684821712, 14 0.9504946768458016, 15 0.9821086022055194,
+                 16 1.0076120938340418, 17 1.0221970273977803, 18 1.0304248035343662, 19 1.0209018150229652, 20 1.011681777185633,
+                 21 0.998265134474384, 22 0.9854958709355692, 23 0.9700138271109292, 24 0.9571180057208653, 25 0.9420814188480902,
+                 26 0.92373255943858, 27 0.9074502938099268, 28 0.8897487216115779, 29 0.87068380072014, 30 0.8524426310244229,
+                 31 0.834601697669825, 32 0.8185681494267079, 33 0.8013079427080833, 34 0.7846344486892425, 35 0.7681270023263902,
+                 36 0.7494849881532109, 37 0.732999715632236, 38 0.717957669108017, 39 0.7004543325002989, 40 0.6838046433090073,
+                 41 0.6680913096577314, 42 0.6524114918558617, 43 0.6389962384504883, 44 0.6252596476191206, 45 0.6117713094927831,
+                 46 0.596873741660348, 47 0.5838335360687014, 48 0.5687573396103732, 49 0.555968466799798, 50 0.546690028850692,
+                 51 0.5391900455509421, 52 0.533278756646476, 53 0.5282234279144192, 54 0.5240161115633014, 55 0.5204350839443946,
+                 56 0.5170742197224848, 57 0.5143288304125437, 58 0.5121896864297507, 59 0.5100269146178619, 60 0.5080894511113709,
+                 61 0.5063220961584448, 62 0.5050381945575406, 63 0.503740510695176, 64 0.5025597620614461, 65 0.5014840751129523,
+                 66 0.5005032152264772, 67 0.499632452974327, 68 0.4987913258296595, 69 0.4980454593659474, 70 0.4972400674737346,
+                 71 0.496427764855106, 72 0.4956711648500426, 73 0.495100828364465, 74 0.4946137693095548, 75 0.4937175861528592,
+                 76 0.4928627843975842, 77 0.4920785792903449, 78 0.4916753557960202, 79 0.4913041938602652, 80 0.4908925324463912,
+                 81 0.4902920417842312, 82 0.4900826644669561, 83 0.4897630536113725, 84 0.4893242072674998, 85 0.4889052445163629,
+                 86 0.4885049169097856, 87 0.4884406381580625, 88 0.488430799705433, 89 0.4878371403495053, 90 0.4874089821336086,
+                 91 0.4874412368381861, 92 0.4874845166820903, 93 0.487537906247622, 94 0.4873799373787165, 95 0.48722501431055,
+                 96 0.4870810672994662, 97 0.4869474664632468, 98 0.4869474664632468, 99 0.4869474664632468, 100 0.4869474664632468/
 ** Climate damage parameters
         a10      Initial damage intercept                              /0/
         a20      Initial damage quadratic term
@@ -181,7 +196,6 @@ VARIABLES
         co2(t)          Carbon concentration increase in atmosphere (GtC from 1750)
         E(t)            Total CO2 emissions (GtCO2 per year)
         EIND(t)         Industrial emissions (GtCO2 per year)
-        nonco2(t)       Forcing from non-CO2 species
         C(t)            Consumption (trillions 2005 US dollars per year)
         K(t)            Capital stock (trillions 2005 US dollars)
         CPC(t)          Per capita consumption (thousands 2005 USD per year)
@@ -219,8 +233,6 @@ EQUATIONS
         EINDEQ(t)       Industrial emissions
         CCAEQ(t)       Cumulative industrial carbon emissions
         CCATOTEQ(t)     Cumulative total carbon emissions
-        nonco2eq1(t)     Radiative forcing from non-CO2 species
-        nonco2eq2(t)     Radiative forcing from non-CO2 species
         FORCEQ(t)        Radiative forcing equation
         DAMFRACEQ(t)    Equation for damage fraction
         DAMEQ(t)        Damage equation
@@ -265,15 +277,13 @@ EQUATIONS
  eindeq(t)..          EIND(t)        =E= sigma(t) * YGROSS(t) * (1-(MIU(t)));
  ccaeq(t+1)..         CCA(t+1)       =E= CCA(t)+ EIND(t)*tstep/3.664;
  ccatoteq(t)..        CCATOT(t)      =E= CCA(t)+cumetree(t);
- nonco2eq1(tearly)..  nonco2(tearly) =E= (nonco2_i + nonco2_e * eind(tearly) + nonco2_t * tearly.val + nonco2_q * quantile);
- nonco2eq2(tlate)..   nonco2(tlate)  =E= (nonco2_i + nonco2_e * eind(tlate) + nonco2_t * 17 + nonco2_q * quantile);
  forceq(t)..          FORC(t)        =E= fco22x * ((log((CO2(t)/co2_1750))/log(2))) + nonco2(t);
  damfraceq(t) ..      DAMFRAC(t)     =E= (a1*T1(t))+(a2*T1(t)**a3) ;
  dameq(t)..           DAMAGES(t)     =E= YGROSS(t) * DAMFRAC(t);
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
  mcabateeq(t)..       MCABATE(t)     =E= pbacktime(t) * MIU(t)**(expcost2-1);
  carbpriceeq(t)..     CPRICE(t)      =E= pbacktime(t) * (MIU(t))**(expcost2-1);
- etreeeq(t)..         etree(t)       =e= (5.26 - 0.25*sqrt(cprice(t))) * (1 - 1/(1+exp(-0.75*(t.val-22))));
+ etreeeq(t)..         etree(t)       =e= (0.5185672924533572 + 0.0454015920700561*EIND(t) - 0.2677252133349495*t.val) * (1 - 1/(1+exp(-0.75*(t.val-22))));
  cumetreeeq(t+1)..    cumetree(t+1)  =e= cumetree(t) + etree(t)*tstep/3.664;
 
 * Climate and carbon cycle
@@ -444,7 +454,7 @@ Loop (T, put sigma(t));
 put / "Forcings" ;
 Loop (T, put forc.l(t));
 put / "Other Forcings" ;
-Loop (T, put nonco2.l(t));
+Loop (T, put nonco2(t));
 put / "Period utilty" ;
 Loop (T, put periodu.l(t));
 put / "Consumption" ;

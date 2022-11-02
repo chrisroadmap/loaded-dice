@@ -12,6 +12,7 @@ scripts/*.*log*
 
 # GAMS working files
 225a/
+225b/
 
 # written scripts
 scripts/gams_scripts
