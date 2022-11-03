@@ -27,7 +27,7 @@ df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs',
 df_afolu = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'afolu_regression.csv'), index_col=0)
 
 infeas = 0
-n_configs = 1001
+n_configs = 101
 
 # Load RFF population scenarios and extend to 2500 using a growth rate that converges to zero
 df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'rff_population_gdp', 'population.csv'), index_col=0)
@@ -88,8 +88,8 @@ PARAMETERS
 ** If optimal control
     ifopt    Indicator where optimized is 1 and base is 0          /1/
 ** Preferences
-    elasmu   Elasticity of marginal utility of consumption         /1.45/
-    prstp    Initial rate of social time preference per year       /0.015/
+    elasmu   Elasticity of marginal utility of consumption         /0.10/
+    prstp    Initial rate of social time preference per year       /0.001/
 ** Technology and population (updated by CS)
     gama     Capital elasticity in production function             /0.300/
     dk       Depreciation rate on capital (per year)               /0.100/
@@ -320,7 +320,6 @@ EQUATIONS
     CBOX4EQ(t)       Carbon box 4 equation
     etreeeq(t)       land use eq
     cumetreeeq(t)    cumulative land use eq
-    constrainT       if we want to e.g. limit warming to 1.5 degrees
 
 *Economic variables
     YGROSSEQ(t)      Output gross equation
@@ -364,7 +363,6 @@ T1eq(t+1)..          T1(t+1)        =E= EBM_A11 * T1(t) + EBM_A12 * T2(t) + EBM_
 t2eq(t+1)..          T2(t+1)        =E= EBM_A21 * T1(t) + EBM_A22 * T2(t) + EBM_A23 * T3(t) + EBM_B2 * FORC(t);
 t3eq(t+1)..          T3(t+1)        =E= EBM_A31 * T1(t) + EBM_A32 * T2(t) + EBM_A33 * T3(t) + EBM_B3 * FORC(t);
 co2eq(t)..           co2(t)         =E= co2_1750 + cbox1(t) + cbox2(t) + cbox3(t) + cbox4(t);
-constrainT(t)..      T1(t)          =L= 1.5;
 
 * Economic variables
 ygrosseq(t)..        YGROSS(t)      =E= (al(t)*(L(t))**(1-GAMA))*(K(t)**GAMA);
@@ -387,7 +385,7 @@ CCA.lo(t)             = 0;
 
 * Control rate limits
 MIU.up(t)             = limmiu;
-MIU.up(t)$(t.val<7)  = 1;
+MIU.up(t)$(t.val<4)  = 1;
 MIU.up(t)$(t.val=2)  = 0.3;
 
 ** Upper and lower bounds for stability

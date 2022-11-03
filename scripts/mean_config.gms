@@ -22,8 +22,8 @@ PARAMETERS
 ** If optimal control
         ifopt    Indicator where optimized is 1 and base is 0          /1/
 ** Preferences
-        elasmu   Elasticity of marginal utility of consumption         /1.45/
-        prstp    Initial rate of social time preference per year       /0.015/
+        elasmu   Elasticity of marginal utility of consumption         /1.0000001/
+        prstp    Initial rate of social time preference per year       /0.005/
 ** Technology and population (updated by CS)
         gama     Capital elasticity in production function             /0.300/
         dk       Depreciation rate on capital (per year)               /0.100/

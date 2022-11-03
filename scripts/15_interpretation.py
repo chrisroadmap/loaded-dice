@@ -11,7 +11,7 @@ here = os.path.dirname(os.path.realpath(__file__))
 
 os.makedirs(os.path.join(here, '..', 'figures'), exist_ok=True)
 
-ensemble_size=1001
+ensemble_size=101
 
 df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
 configs = df_configs.index
