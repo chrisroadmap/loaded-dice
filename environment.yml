@@ -1,12 +1,20 @@
 name: loaded-dice
 channels:
-  - chrisroadmap
   - conda-forge
   - defaults
 dependencies:
-  - climateforcing==0.2.3
-  - fair==1.6.4
+  - ipython
   - matplotlib
   - numpy
   - pandas
+  - pooch
+  - py7zr
+  - pyarrow
+  - scmdata
   - scipy
+  - statsmodels
+  - pip
+  - pip:
+    - -e ../fair2.1-calibrate
+    - aneris-iamc[units]
+
