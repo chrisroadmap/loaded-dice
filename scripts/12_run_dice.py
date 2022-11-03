@@ -30,7 +30,7 @@ df_co2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 
 df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp245.csv'), index_col=0)
 df_afolu = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'afolu_regression.csv'), index_col=0)
 
-n_configs = 1001
+n_configs = 101
 
 # Load RFF population scenarios and extend to 2500 using a growth rate that converges to zero
 df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'rff_population_gdp', 'population.csv'), index_col=0)
@@ -91,8 +91,8 @@ PARAMETERS
 ** If optimal control
         ifopt    Indicator where optimized is 1 and base is 0          /1/
 ** Preferences
-        elasmu   Elasticity of marginal utility of consumption         /1.45/
-        prstp    Initial rate of social time preference per year       /0.015/
+        elasmu   Elasticity of marginal utility of consumption         /1.00/
+        prstp    Initial rate of social time preference per year       /0.005/
 ** Technology and population (updated by CS)
         gama     Capital elasticity in production function             /0.300/
         dk       Depreciation rate on capital (per year)               /0.100/
@@ -390,7 +390,7 @@ CCA.lo(t)             = 0;
 
 * Control rate limits
 MIU.up(t)             = limmiu;
-MIU.up(t)$(t.val<7)  = 1;
+MIU.up(t)$(t.val<5)  = 1;
 MIU.up(t)$(t.val=2)  = 0.3;
 
 ** Upper and lower bounds for stability
