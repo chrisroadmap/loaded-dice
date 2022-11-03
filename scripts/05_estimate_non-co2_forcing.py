@@ -11,6 +11,21 @@ import scipy.stats as st
 from scipy.signal import savgol_filter
 #import scipy.optimize as op
 
+pl.rcParams['figure.figsize'] = (12/2.54, 12/2.54)
+pl.rcParams['font.size'] = 9
+pl.rcParams['font.family'] = 'Arial'
+pl.rcParams['ytick.direction'] = 'in'
+pl.rcParams['ytick.minor.visible'] = True
+pl.rcParams['ytick.major.right'] = True
+pl.rcParams['ytick.right'] = True
+pl.rcParams['xtick.direction'] = 'in'
+pl.rcParams['xtick.minor.visible'] = True
+pl.rcParams['xtick.major.top'] = True
+pl.rcParams['xtick.top'] = True
+pl.rcParams['axes.spines.top'] = True
+pl.rcParams['axes.spines.bottom'] = True
+pl.rcParams['figure.dpi'] = 150
+
 here = os.path.dirname(os.path.realpath(__file__))
 
 ar6 = pd.read_csv(os.path.join(here, "..", "data_input", "wg3", "co2_total_forcing_fair1.6.2_p05_50_95.csv"))
@@ -159,6 +174,13 @@ pl.plot(
     color='r',
     alpha=0.1
 )
+
+pl.title('AR6 IAM scenarios, harmonised & passed vetting')
+pl.ylabel('Non-CO$_2$ forcing, W m$^{-2}$')
+pl.xlim(2014, 2100)
+pl.tight_layout()
+pl.savefig(os.path.join(here, '..', 'figures', 'ar6_non-co2.png'))
+pl.savefig(os.path.join(here, '..', 'figures', 'ar6_non-co2.pdf'))
 pl.show()
 
 for year in range(2020, 2101, 10):
@@ -186,13 +208,16 @@ for year in range(2020, 2101, 10):
         pl.scatter(ffi, nonco2_95, color=(shade, 0, 0))
         print(year, sl05, sl50, sl95, ic05, ic50, ic95)
         pl.plot(np.linspace(-20, 120), np.linspace(-20, 120) * sl05 + ic05, color=(0, 0, shade))
-        pl.plot(np.linspace(-20, 120), np.linspace(-20, 120) * sl50 + ic50, color=(shade, shade, shade))
+        pl.plot(np.linspace(-20, 120), np.linspace(-20, 120) * sl50 + ic50, color=(shade, shade, shade), label=year)
         pl.plot(np.linspace(-20, 120), np.linspace(-20, 120) * sl95 + ic95, color=(shade, 0, 0))
 
 pl.title('AR6 IAM scenarios, harmonised & passed vetting')
+pl.xlabel('FFI emissions, GtCO$_2$ yr$^{-1}$')
+pl.ylabel('Non-CO$_2$ forcing, W m$^{-2}$')
 pl.legend()
-pl.xlabel('FFI emissions')
-pl.ylabel('Non-CO2 forcing')
+pl.tight_layout()
+pl.savefig(os.path.join(here, '..', 'figures', 'co2_ffi_non-co2.png'))
+pl.savefig(os.path.join(here, '..', 'figures', 'co2_ffi_non-co2.pdf'))
 pl.show()
 
 sm_df = pd.DataFrame(x, columns=['ffi', 'period', 'quantile'])

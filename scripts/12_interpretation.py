@@ -31,7 +31,7 @@ pl.rcParams['axes.spines.top'] = True
 pl.rcParams['axes.spines.bottom'] = True
 pl.rcParams['figure.dpi'] = 150
 
-for scenario in ['dice_1p5deglowOS']:
+for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     dfs = []
     outputs = {}
     outputs['CO2'] = np.ones((100, ensemble_size)) * np.nan
