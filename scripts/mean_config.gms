@@ -107,14 +107,8 @@ PARAMETERS
         EBM_B3   Forcing component to ocean layer                      /0.0019268049361695354/
         fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /3.866891873961772/
         quantile Non-CO2 forcing quantile                              /50/
-** Climate damage parameters: generalised logistic following Burke et al. 2015
-        burkeA /-1.14216697e-02/
-        burkeB /1.24758241e+00/
-        burkeC /9.99838836e-01/
-        burkeK /8.04868674e-02/
-        burkeQ /9.75461304e-04/
-        burkeNU /1.67601652e-04/
-
+** Climate damage parameters:
+        a2       Quadratic multiplier (Howard & Sterner 2017 base)     /0.00236/
 ** Abatement cost
         expcost2  Exponent of control cost function                    /2.6/
         pback     Cost of backstop 2020$ per tCO2 2023                 /679/
@@ -276,7 +270,7 @@ EQUATIONS
  nonco2eq1(tearly)..  nonco2(tearly) =E= -0.1407837493133699 + (0.0087153033278821)*EIND(tearly) + (0.010585466099088)*quantile + (0.0102037759653629)*tearly.val;
  nonco2eq2(tlate)..   nonco2(tlate)  =E= -0.1407837493133699 + (0.0087153033278821)*EIND(tlate) + (0.010585466099088)*quantile + (0.0102037759653629)*27;
  forceq(t)..          FORC(t)        =E= fco22x * ((log((CO2(t)/co2_1750))/log(2))) + nonco2(t);
- damfraceq(t) ..      DAMFRAC(t)     =E= burkeA + (burkeK - burkeA) / ((burkeC+burkeQ*exp(-burkeB*T1(t)))**(1/burkeNU));
+ damfraceq(t) ..      DAMFRAC(t)     =E= a2*T1(t)**2;
  dameq(t)..           DAMAGES(t)     =E= YGROSS(t) * DAMFRAC(t);
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
  mcabateeq(t)..       MCABATE(t)     =E= pbacktime(t) * MIU(t)**(expcost2-1);

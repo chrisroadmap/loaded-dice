@@ -172,6 +172,10 @@ for i, scenario in enumerate(scenarios):
     df = pd.DataFrame(np.array([f.forcing[-1, i, :, 2], effective_f2x]).T, index=configs, columns=['co2_forcing_2023', 'effective_f2x'])
     df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'co2_forcing_{scenario}.csv'))
 
+    # save non-CO2 forcing in 2023
+    df = pd.DataFrame((np.nansum(f.forcing[-1, i, :, :], axis=-1) - f.forcing[-1, i, :, 2] - f.forcing[-3, i, :, 54:56].mean(axis=-1)), index=configs)
+    df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'anthropogenic_non-co2_forcing_{scenario}.csv'))
+
     # use surface layer 1850-1900 offset; apply same offset to all layers to preserve differences between layers that drives diffusion
     df = pd.DataFrame(f.temperature[-1, i, :, :]-f.temperature[33:50, i, :, 0].mean(axis=0), index=configs, columns=['mixed_layer', 'mid_ocean', 'deep_ocean'])
     df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'temperature_{scenario}.csv'))

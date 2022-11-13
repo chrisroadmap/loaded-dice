@@ -11,7 +11,7 @@ here = os.path.dirname(os.path.realpath(__file__))
 
 os.makedirs(os.path.join(here, '..', 'figures'), exist_ok=True)
 
-ensemble_size=101
+ensemble_size=1001
 
 df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
 configs = df_configs.index
@@ -31,15 +31,15 @@ pl.rcParams['axes.spines.top'] = True
 pl.rcParams['axes.spines.bottom'] = True
 pl.rcParams['figure.dpi'] = 150
 
-for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
+for scenario in ['dice']:#, 'dice_below2deg', 'dice_1p5deglowOS']:
     dfs = []
     outputs = {}
-    outputs['CO2'] = np.ones((100, ensemble_size)) * np.nan
-    outputs['T'] = np.ones((100, ensemble_size)) * np.nan
-    outputs['carbon_price'] = np.ones((100, ensemble_size)) * np.nan
-    outputs['SCC'] = np.ones((100, ensemble_size)) * np.nan
-    outputs['E'] = np.ones((100, ensemble_size)) * np.nan
-    outputs['F'] = np.ones((100, ensemble_size)) * np.nan
+    outputs['CO2'] = np.ones((160, ensemble_size)) * np.nan
+    outputs['T'] = np.ones((160, ensemble_size)) * np.nan
+    outputs['carbon_price'] = np.ones((160, ensemble_size)) * np.nan
+    outputs['SCC'] = np.ones((160, ensemble_size)) * np.nan
+    outputs['E'] = np.ones((160, ensemble_size)) * np.nan
+    outputs['F'] = np.ones((160, ensemble_size)) * np.nan
     outputs['infeasible'] = np.zeros((ensemble_size), dtype=bool)
     for run, config in enumerate(configs[:ensemble_size]):
         try:
@@ -59,11 +59,11 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
         except:
             pass
 
-    print('emissions   2100', np.nanpercentile(outputs['E'][16, :], (5, 50, 95)))  # CO2 fossil emissions 2100
+    print('emissions   2100', np.nanpercentile(outputs['E'][27, :], (5, 50, 95)))  # CO2 fossil emissions 2100
     print('SCC         2020', np.nanpercentile(outputs['SCC'][0, :], (5, 50, 95))) # social cost of carbon 2020
-    print('temperature 2100', np.nanpercentile(outputs['T'][16, :], (5, 50, 95)))  # temperature 2100
+    print('temperature 2100', np.nanpercentile(outputs['T'][27, :], (5, 50, 95)))  # temperature 2100
     print('temperature peak', np.nanpercentile(np.max(outputs['T'], axis=0), (5, 50, 95)))  # peak temperature
-    print('forcing     2100', np.nanpercentile(outputs['F'][16, :], (5, 50, 95)))  # radiative forcing 2100
+    print('forcing     2100', np.nanpercentile(outputs['F'][27, :], (5, 50, 95)))  # radiative forcing 2100
 
     yunit = {
         'E': 'GtCO$_2$ yr$^{-1}$',
@@ -78,7 +78,7 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
         'SCC': 'Social cost of carbon'
     }
     ylim = {
-        'E': (-10, 60),
+        'E': (-30, 40),
         'CO2': (350, 750),
         'T': (0.5, 4),
         'SCC': (0, 1000)
@@ -87,19 +87,19 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     fig, ax = pl.subplots(2,2)
     for i, var in enumerate(['E', 'CO2', 'T', 'SCC']):
         ax[i//2,i%2].fill_between(
-            np.arange(2020, 2520, 5),
+            np.arange(2023, 2501, 3),
             np.nanpercentile(outputs[var], 5, axis=1),
             np.nanpercentile(outputs[var], 95, axis=1),
             color='0.8'
         )
         ax[i//2,i%2].fill_between(
-            np.arange(2020, 2520, 5),
+            np.arange(2023, 2501, 3),
             np.nanpercentile(outputs[var], 16, axis=1),
             np.nanpercentile(outputs[var], 84, axis=1),
             color='0.6'
         )
-        ax[i//2,i%2].plot(np.arange(2020, 2520, 5), np.nanmedian(outputs[var], axis=1), color='k')
-        ax[i//2,i%2].set_xlim(2020,2125)
+        ax[i//2,i%2].plot(np.arange(2023, 2501, 3), np.nanmedian(outputs[var], axis=1), color='k')
+        ax[i//2,i%2].set_xlim(2023,2125)
         ax[i//2,i%2].set_title(title[var])
         ax[i//2,i%2].set_ylabel(yunit[var])
         ax[i//2,i%2].set_ylim(ylim[var])

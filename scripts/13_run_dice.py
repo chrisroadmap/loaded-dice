@@ -1,26 +1,42 @@
-"""Generate a GAMS script for the mean climate response, for testing."""
+# TODO: change quantile of non-CO2 each run
 
+import json
 import os
+import subprocess
 
+from scipy.interpolate import interp1d
+from tqdm import tqdm
 import numpy as np
 import pandas as pd
-from scipy.interpolate import interp1d
 
 # should really import these constants from FaIR
 carbon_convert = 5.1352 * 12.011 / 28.97
+
+class InfeasibleSolutionError(Exception):
+    def __init__(self, run):
+        print(f"Infeasible solution in run number {run}.")
 
 here = os.path.dirname(os.path.realpath(__file__))
 
 df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
 configs = df_configs.index
 
-#df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_ssp245.csv'), index_col=0)
+os.makedirs(os.path.join(here, 'gams_scripts'), exist_ok=True)
+os.makedirs(os.path.join(here, '..', 'data_output', 'dice'), exist_ok=True)
+
+df_nonco2_2023 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_ssp245.csv'), index_col=0)
 df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'gas_partitions_ssp245.csv'), index_col=0)
 df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'climate_response_params.csv'), index_col=0)
 df_co2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'co2_forcing_ssp245.csv'), index_col=0)
 df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp245.csv'), index_col=0)
 df_afolu = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'afolu_regression.csv'), index_col=0)
 df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'nonco2_regression.csv'), index_col=0)
+
+order = df_nonco2_2023.loc[:, '0'].argsort()
+ranks = order.argsort()
+quantiles = ranks/10
+
+n_configs = 1001
 
 # Load RFF population scenarios and extend to 2500 using a growth rate that converges to zero
 df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'rff_population_gdp', 'population.csv'), index_col=0)
@@ -40,24 +56,9 @@ pop_years_out = np.arange(2023, 2501, 3)
 f = interp1d(pop_years_in, population_sample)
 population_sample_out = f(pop_years_out)
 
+# In this climate-only experiment, we are not modifying away from the median population projection.
 pop = np.median(population_sample_out, axis=0)
 
-t1 = df_temp['mixed_layer'].mean()
-t2 = df_temp['mid_ocean'].mean()
-t3 = df_temp['deep_ocean'].mean()
-#nonco2 = np.median(df_nonco2.values, axis=0)
-cr = df_cr.mean(axis=0)
-f2x = df_co2['effective_f2x'].mean()
-r0 = df_configs['r0'].mean()
-ru = df_configs['rU'].mean()
-rt = df_configs['rT'].mean()
-ra = df_configs['rA'].mean()
-cbox1 = df_cbox['geological'].mean()
-cbox2 = df_cbox['slow'].mean()
-cbox3 = df_cbox['mid'].mean()
-cbox4 = df_cbox['fast'].mean()
-co2_2023 = df_cbox['co2_2023'].mean()
-co2_1750 = df_configs['co2_concentration_1750'].mean()
 afolu_const = df_afolu.loc['constant', 'coefficient']
 afolu_ffi = df_afolu.loc['CO2_EIP', 'coefficient']
 afolu_period = df_afolu.loc['period', 'coefficient']
@@ -66,7 +67,25 @@ nonco2_ffi = df_nonco2.loc['ffi', 'coefficient']
 nonco2_period = df_nonco2.loc['period', 'coefficient']
 nonco2_quantile = df_nonco2.loc['quantile', 'coefficient']
 
-template = f'''
+for run, config in tqdm(enumerate(configs[:n_configs]), total=n_configs):
+    t1 = df_temp.loc[config, 'mixed_layer']
+    t2 = df_temp.loc[config, 'mid_ocean']
+    t3 = df_temp.loc[config, 'deep_ocean']
+    cr = df_cr.loc[config].values
+    f2x = df_co2.loc[config, 'effective_f2x']
+    r0 = df_configs.loc[config, 'r0']
+    ru = df_configs.loc[config, 'rU']
+    rt = df_configs.loc[config, 'rT']
+    ra = df_configs.loc[config, 'rA']
+    cbox1 = df_cbox.loc[config, 'geological']
+    cbox2 = df_cbox.loc[config, 'slow']
+    cbox3 = df_cbox.loc[config, 'mid']
+    cbox4 = df_cbox.loc[config, 'fast']
+    co2_2023 = df_cbox.loc[config, 'co2_2023']
+    co2_1750 = df_configs.loc[config, 'co2_concentration_1750']
+    quantile = quantiles.loc[config]
+
+    template = f'''
 $ontext
 DICE with FaIR carbon cycle and climate response.
 
@@ -79,7 +98,7 @@ $offtext
 
 $title        DICE-2016R-FAIR June 2022
 
-set     t        Time periods (3 years per period)                     /1*160/
+set     t        Time periods (5 years per period)                     /1*160/
         box      Carbon box                                            /1*4/
 
 PARAMETERS
@@ -174,15 +193,9 @@ PARAMETERS
         EBM_B2   Forcing component to ocean layer                      /{cr[10]}/
         EBM_B3   Forcing component to ocean layer                      /{cr[11]}/
         fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /{f2x}/
-        quantile Non-CO2 forcing quantile                              /50/
-** Climate damage parameters: generalised logistic following Burke et al. 2015
-        burkeA /-1.14216697e-02/
-        burkeB /1.24758241e+00/
-        burkeC /9.99838836e-01/
-        burkeK /8.04868674e-02/
-        burkeQ /9.75461304e-04/
-        burkeNU /1.67601652e-04/
-
+        quantile Non-CO2 forcing quantile                              /{quantile}/
+** Climate damage parameters:
+        a2       Quadratic multiplier (Howard & Sterner 2017 base)     /0.007438/
 ** Abatement cost
         expcost2  Exponent of control cost function                    /2.6/
         pback     Cost of backstop 2020$ per tCO2 2023                 /679/
@@ -222,7 +235,6 @@ PARAMETERS
         tlast(t)  = yes$(t.val eq card(t));
         tearly(t) = yes$(t.val<28);
         tlate(t)  = yes$(t.val>27);
-
 * Parameters for carbon cycle
         g1 = sum(box,
                 a(box) * tau(box) *
@@ -246,7 +258,7 @@ PARAMETERS
         optlrsav = (dk + .004)/(dk + .004*elasmu + prstp)*gama;
 
 * Base Case Carbon Price
-        cpricebase(t)= cprice0*(1+gcprice)**(tstep*(t.val-1));
+        cpricebase(t)= cprice0*(1+gcprice)**(5*(t.val-1));
 
 VARIABLES
         MIU(t)          Emission control rate GHGs
@@ -344,7 +356,7 @@ EQUATIONS
  nonco2eq1(tearly)..  nonco2(tearly) =E= {nonco2_const} + ({nonco2_ffi})*EIND(tearly) + ({nonco2_quantile})*quantile + ({nonco2_period})*tearly.val;
  nonco2eq2(tlate)..   nonco2(tlate)  =E= {nonco2_const} + ({nonco2_ffi})*EIND(tlate) + ({nonco2_quantile})*quantile + ({nonco2_period})*27;
  forceq(t)..          FORC(t)        =E= fco22x * ((log((CO2(t)/co2_1750))/log(2))) + nonco2(t);
- damfraceq(t) ..      DAMFRAC(t)     =E= burkeA + (burkeK - burkeA) / ((burkeC+burkeQ*exp(-burkeB*T1(t)))**(1/burkeNU));
+ damfraceq(t) ..      DAMFRAC(t)     =E= a2*T1(t)**2;
  dameq(t)..           DAMAGES(t)     =E= YGROSS(t) * DAMFRAC(t);
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
  mcabateeq(t)..       MCABATE(t)     =E= pbacktime(t) * MIU(t)**(expcost2-1);
@@ -452,7 +464,7 @@ ppm(t)        = co2.l(t)/{carbon_convert};
 * For ALL relevant model outputs, see 'PutOutputAllT.gms' in the Include folder.
 * The statement at the end of the *.lst file "Output..." will tell you where to find the file.
 
-file results /"mean_config.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
+file results /"{here}/../data_output/dice/{config:07d}.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
 put results;
 put // "Period";
 Loop (T, put T.val);
@@ -541,8 +553,34 @@ Loop (T, put cbox4.l(t));
 put / "Objective" ;
 put utility.l;
 putclose;
-'''
+    '''
 
-# write the script
-with open(os.path.join(here, 'mean_config.gms'), 'w') as f:
-    f.write(template)
+    # write the script
+    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.gms'), 'w') as f:
+        f.write(template)
+
+    # run the command
+    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.out'), "w") as outfile:
+        subprocess.run(
+            [
+                'gams',
+                os.path.join(
+                    here,
+                    'gams_scripts',
+                    f'config{config:07d}.gms'
+                ),
+                '-o',
+                os.path.join(
+                    here,
+                    'gams_scripts',
+                    f'config{config:07d}.lst'
+                ),
+            ],
+            stdout = outfile,
+        )
+
+    # were results feasible?
+    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.lst')) as f:
+        output = f.read()
+        if " ** Infeasible solution. Reduced gradient less than tolerance." in output:
+            raise InfeasibleSolutionError(run)

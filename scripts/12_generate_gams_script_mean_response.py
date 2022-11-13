@@ -1,73 +1,71 @@
-# TODO: change quantile of non-CO2 each run
+"""Generate a GAMS script for the mean climate response, for testing."""
 
-import json
 import os
-import subprocess
 
-from tqdm import tqdm
 import numpy as np
 import pandas as pd
+from scipy.interpolate import interp1d
 
 # should really import these constants from FaIR
 carbon_convert = 5.1352 * 12.011 / 28.97
-
-class InfeasibleSolutionError(Exception):
-    def __init__(self, run):
-        print(f"Infeasible solution in run number {run}.")
 
 here = os.path.dirname(os.path.realpath(__file__))
 
 df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
 configs = df_configs.index
 
-os.makedirs(os.path.join(here, 'gams_scripts'), exist_ok=True)
-os.makedirs(os.path.join(here, '..', 'data_output', 'dice'), exist_ok=True)
-
-df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_ssp245.csv'), index_col=0)
+#df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_ssp245.csv'), index_col=0)
 df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'gas_partitions_ssp245.csv'), index_col=0)
 df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'climate_response_params.csv'), index_col=0)
 df_co2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'co2_forcing_ssp245.csv'), index_col=0)
 df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp245.csv'), index_col=0)
 df_afolu = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'afolu_regression.csv'), index_col=0)
-
-n_configs = 101
+df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'nonco2_regression.csv'), index_col=0)
 
 # Load RFF population scenarios and extend to 2500 using a growth rate that converges to zero
 df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'rff_population_gdp', 'population.csv'), index_col=0)
-data_pop = df_pop.loc[1:n_configs+1, '2020':'2300'].values
-growth_pop = (df_pop.loc[1:n_configs+1, '2255':'2300'].values/df_pop.loc[1:n_configs+1, '2250':'2295'].values).mean(axis=1)
-data_ext_pop = np.ones((n_configs+1, 43))
+data_pop = df_pop.loc[:, '2020':'2300'].values
+growth_pop = (df_pop.loc[:, '2255':'2300'].values/df_pop.loc[:, '2250':'2295'].values).mean(axis=1)
+data_ext_pop = np.ones((10000, 43))
 data_ext_pop[:, 0] = growth_pop * data_pop[:, -1]
 
 for period in range(1, 43):
     data_ext_pop[:, period] = data_ext_pop[:, period-1] * ((42-period)/42*growth_pop + period/42)
 
 population_sample = np.concatenate((data_pop, data_ext_pop), axis=1)/1e6
+# then interpolate to 3-year timesteps
+pop_years_in = np.arange(2020, 2520, 5)
+pop_years_out = np.arange(2023, 2501, 3)
 
+f = interp1d(pop_years_in, population_sample)
+population_sample_out = f(pop_years_out)
+
+pop = np.median(population_sample_out, axis=0)
+
+t1 = df_temp['mixed_layer'].mean()
+t2 = df_temp['mid_ocean'].mean()
+t3 = df_temp['deep_ocean'].mean()
+cr = df_cr.mean(axis=0)
+f2x = df_co2['effective_f2x'].mean()
+r0 = df_configs['r0'].mean()
+ru = df_configs['rU'].mean()
+rt = df_configs['rT'].mean()
+ra = df_configs['rA'].mean()
+cbox1 = df_cbox['geological'].mean()
+cbox2 = df_cbox['slow'].mean()
+cbox3 = df_cbox['mid'].mean()
+cbox4 = df_cbox['fast'].mean()
+co2_2023 = df_cbox['co2_2023'].mean()
+co2_1750 = df_configs['co2_concentration_1750'].mean()
 afolu_const = df_afolu.loc['constant', 'coefficient']
 afolu_ffi = df_afolu.loc['CO2_EIP', 'coefficient']
 afolu_period = df_afolu.loc['period', 'coefficient']
+nonco2_const = df_nonco2.loc['Intercept', 'coefficient']
+nonco2_ffi = df_nonco2.loc['ffi', 'coefficient']
+nonco2_period = df_nonco2.loc['period', 'coefficient']
+nonco2_quantile = df_nonco2.loc['quantile', 'coefficient']
 
-for run, config in tqdm(enumerate(configs[:n_configs]), total=n_configs):
-    t1 = df_temp.loc[config, 'mixed_layer']
-    t2 = df_temp.loc[config, 'mid_ocean']
-    t3 = df_temp.loc[config, 'deep_ocean']
-    nonco2 = df_nonco2.loc[config, :].values
-    cr = df_cr.loc[config].values
-    f2x = df_co2.loc[config, 'effective_f2x']
-    r0 = df_configs.loc[config, 'r0']
-    ru = df_configs.loc[config, 'rU']
-    rt = df_configs.loc[config, 'rT']
-    ra = df_configs.loc[config, 'rA']
-    cbox1 = df_cbox.loc[config, 'geological']
-    cbox2 = df_cbox.loc[config, 'slow']
-    cbox3 = df_cbox.loc[config, 'mid']
-    cbox4 = df_cbox.loc[config, 'fast']
-    co2_2020 = df_cbox.loc[config, 'co2_2020']
-    co2_1750 = df_configs.loc[config, 'co2_concentration_1750']
-    pop = population_sample[run, :]
-
-    template = f'''
+template = f'''
 $ontext
 DICE with FaIR carbon cycle and climate response.
 
@@ -80,27 +78,27 @@ $offtext
 
 $title        DICE-2016R-FAIR June 2022
 
-set     t        Time periods (5 years per period)                     /1*100/
+set     t        Time periods (3 years per period)                     /1*160/
         box      Carbon box                                            /1*4/
 
 PARAMETERS
 ** Availability of fossil fuels
         fosslim  Maximum cumulative extraction fossil fuels (GtC)      /6000/
 **Time Step
-        tstep    Years per Period                                      /5/
+        tstep    Years per Period                                      /3/
 ** If optimal control
         ifopt    Indicator where optimized is 1 and base is 0          /1/
 ** Preferences
-        elasmu   Elasticity of marginal utility of consumption         /1.0000001/
-        prstp    Initial rate of social time preference per year       /0.005/
+        elasmu   Elasticity of marginal utility of consumption         /1.24/
+        prstp    Initial rate of social time preference per year       /0.002/
 ** Technology and population (updated by CS)
         gama     Capital elasticity in production function             /0.300/
         dk       Depreciation rate on capital (per year)               /0.100/
         q0       Initial world gross output 2020 (trill 2020 USD)      /133.09357438648962/
         k0       Initial capital value 2019                            /341.0027556142761/
-        a0       Initial level of total factor productivity            /5.517123167924143/
-        ga0      Initial growth rate for TFP per 5 years               /0.076/
-        dela     Decline rate of TFP per 5 years                       /0.005/
+        a0       Initial level of total factor productivity            /5.4028103629527156/
+        ga0      Initial growth rate for TFP per 3 years               /0.045/
+        dela     Decline rate of TFP per 3 years                       /0.003/
         l(t)     /1 {pop[0]}, 2 {pop[1]}, 3 {pop[2]}, 4 {pop[3]}, 5 {pop[4]},
                   6 {pop[5]}, 7 {pop[6]}, 8 {pop[7]}, 9 {pop[8]}, 10 {pop[9]},
                  11 {pop[10]}, 12 {pop[11]}, 13 {pop[12]}, 14 {pop[13]}, 15 {pop[14]},
@@ -120,18 +118,29 @@ PARAMETERS
                  81 {pop[80]}, 82 {pop[81]}, 83 {pop[82]}, 84 {pop[83]}, 85 {pop[84]},
                  86 {pop[85]}, 87 {pop[86]}, 88 {pop[87]}, 89 {pop[88]}, 90 {pop[89]},
                  91 {pop[90]}, 92 {pop[91]}, 93 {pop[92]}, 94 {pop[93]}, 95 {pop[94]},
-                 96 {pop[95]}, 97 {pop[96]}, 98 {pop[97]}, 99 {pop[98]}, 100 {pop[99]}/
+                 96 {pop[95]}, 97 {pop[96]}, 98 {pop[97]}, 99 {pop[98]}, 100 {pop[99]},
+                 101 {pop[100]}, 102 {pop[101]}, 103 {pop[102]}, 104 {pop[103]}, 105 {pop[104]},
+                 106 {pop[105]}, 107 {pop[106]}, 108 {pop[107]}, 109 {pop[108]}, 110 {pop[109]},
+                 111 {pop[110]}, 112 {pop[111]}, 113 {pop[112]}, 114 {pop[113]}, 115 {pop[114]},
+                 116 {pop[115]}, 117 {pop[116]}, 118 {pop[117]}, 119 {pop[118]}, 120 {pop[119]},
+                 121 {pop[120]}, 122 {pop[121]}, 123 {pop[122]}, 124 {pop[123]}, 125 {pop[124]},
+                 126 {pop[125]}, 127 {pop[126]}, 128 {pop[127]}, 129 {pop[128]}, 130 {pop[129]},
+                 131 {pop[130]}, 132 {pop[131]}, 133 {pop[132]}, 134 {pop[133]}, 135 {pop[134]},
+                 136 {pop[135]}, 137 {pop[136]}, 138 {pop[137]}, 139 {pop[138]}, 140 {pop[139]},
+                 141 {pop[140]}, 142 {pop[141]}, 143 {pop[142]}, 144 {pop[143]}, 145 {pop[144]},
+                 146 {pop[145]}, 147 {pop[146]}, 148 {pop[147]}, 149 {pop[148]}, 150 {pop[149]},
+                 151 {pop[150]}, 152 {pop[151]}, 153 {pop[152]}, 154 {pop[153]}, 155 {pop[154]},
+                 156 {pop[155]}, 157 {pop[156]}, 158 {pop[157]}, 159 {pop[158]}, 160 {pop[159]}/
 ** Emissions parameters
         gsigma1  Initial growth of sigma (per year)                    /-0.0152/
-        dsig     Decline rate of decarbonization (per period)          /-0.001/
-        e0       Industrial emissions 2020 (GtCO2 per year)            /36.70/
-* projections from RCMIP (should use GCP; TODO)
-        miu0     Initial emissions control rate for base case 2015     /0.15/
+        dsig     Decline rate of decarbonization (per period)          /-0.0006/
+        e0       Industrial emissions 2023 (GtCO2 per year)            /36.64/
+        miu0     Initial emissions control rate for base case 2023     /0.15/
 * Initial Conditions
-        co2_2020 Initial concentration in atmosphere 2020 (GtC)        /{co2_2020*carbon_convert}/
+        co2_2023 Initial concentration in atmosphere 2023 (GtC)        /{co2_2023*carbon_convert}/
         co2_1750 Pre-industrial concentration atmosphere  (GtC)        /{co2_1750*carbon_convert}/
 * These are for declaration and are defined later
-        sig0     Carbon intensity 2010 (kgCO2 per output 2005 USD 2010)
+        sig0     Carbon intensity 2023 (kgCO2 per output 2020 Int$)
 ** Climate model parameters
         g0       Carbon cycle parameter (Leach et al. 2021)
         g1       Carbon cycle parameter (Leach et al. 2021)
@@ -143,10 +152,10 @@ PARAMETERS
                      / 1 1e9, 2 394.4, 3 36.54, 4 4.304 /
         a(box)   Partition fraction of the four atmospheric carbon boxes
                      / 1 0.2173, 2 0.2240, 3 0.2824, 4 0.2763 /
-        ICBOX1   Initial GtC concentration of carbon box 1 in 2020     /{cbox1}/
-        ICBOX2   Initial GtC concentration of carbon box 2 in 2020     /{cbox2}/
-        ICBOX3   Initial GtC concentration of carbon box 3 in 2020     /{cbox3}/
-        ICBOX4   Initial GtC concentration of carbon box 4 in 2020     /{cbox4}/
+        ICBOX1   Initial GtC concentration of carbon box 1 in 2023     /{cbox1}/
+        ICBOX2   Initial GtC concentration of carbon box 2 in 2023     /{cbox2}/
+        ICBOX3   Initial GtC concentration of carbon box 3 in 2023     /{cbox3}/
+        ICBOX4   Initial GtC concentration of carbon box 4 in 2023     /{cbox4}/
         iirf_horizon Time horizon for IIRF in yr                       /100/
         t1_0     three-layer "mixed layer" temperature change          /{t1}/
         t2_0     three-layer "mid-ocean" temperature change            /{t2}/
@@ -164,38 +173,14 @@ PARAMETERS
         EBM_B2   Forcing component to ocean layer                      /{cr[10]}/
         EBM_B3   Forcing component to ocean layer                      /{cr[11]}/
         fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /{f2x}/
-        nonco2(t)   /1 {nonco2[0]}, 2 {nonco2[1]}, 3 {nonco2[2]}, 4 {nonco2[3]}, 5 {nonco2[4]},
-                  6 {nonco2[5]}, 7 {nonco2[6]}, 8 {nonco2[7]}, 9 {nonco2[8]}, 10 {nonco2[9]},
-                 11 {nonco2[10]}, 12 {nonco2[11]}, 13 {nonco2[12]}, 14 {nonco2[13]}, 15 {nonco2[14]},
-                 16 {nonco2[15]}, 17 {nonco2[16]}, 18 {nonco2[17]}, 19 {nonco2[18]}, 20 {nonco2[19]},
-                 21 {nonco2[20]}, 22 {nonco2[21]}, 23 {nonco2[22]}, 24 {nonco2[23]}, 25 {nonco2[24]},
-                 26 {nonco2[25]}, 27 {nonco2[26]}, 28 {nonco2[27]}, 29 {nonco2[28]}, 30 {nonco2[29]},
-                 31 {nonco2[30]}, 32 {nonco2[31]}, 33 {nonco2[32]}, 34 {nonco2[33]}, 35 {nonco2[34]},
-                 36 {nonco2[35]}, 37 {nonco2[36]}, 38 {nonco2[37]}, 39 {nonco2[38]}, 40 {nonco2[39]},
-                 41 {nonco2[40]}, 42 {nonco2[41]}, 43 {nonco2[42]}, 44 {nonco2[43]}, 45 {nonco2[44]},
-                 46 {nonco2[45]}, 47 {nonco2[46]}, 48 {nonco2[47]}, 49 {nonco2[48]}, 50 {nonco2[49]},
-                 51 {nonco2[50]}, 52 {nonco2[51]}, 53 {nonco2[52]}, 54 {nonco2[53]}, 55 {nonco2[54]},
-                 56 {nonco2[55]}, 57 {nonco2[56]}, 58 {nonco2[57]}, 59 {nonco2[58]}, 60 {nonco2[59]},
-                 61 {nonco2[60]}, 62 {nonco2[61]}, 63 {nonco2[62]}, 64 {nonco2[63]}, 65 {nonco2[64]},
-                 66 {nonco2[65]}, 67 {nonco2[66]}, 68 {nonco2[67]}, 69 {nonco2[68]}, 70 {nonco2[69]},
-                 71 {nonco2[70]}, 72 {nonco2[71]}, 73 {nonco2[72]}, 74 {nonco2[73]}, 75 {nonco2[74]},
-                 76 {nonco2[75]}, 77 {nonco2[76]}, 78 {nonco2[77]}, 79 {nonco2[78]}, 80 {nonco2[79]},
-                 81 {nonco2[80]}, 82 {nonco2[81]}, 83 {nonco2[82]}, 84 {nonco2[83]}, 85 {nonco2[84]},
-                 86 {nonco2[85]}, 87 {nonco2[86]}, 88 {nonco2[87]}, 89 {nonco2[88]}, 90 {nonco2[89]},
-                 91 {nonco2[90]}, 92 {nonco2[91]}, 93 {nonco2[92]}, 94 {nonco2[93]}, 95 {nonco2[94]},
-                 96 {nonco2[95]}, 97 {nonco2[96]}, 98 {nonco2[96]}, 99 {nonco2[96]}, 100 {nonco2[96]}/
-** Climate damage parameters
-        a10      Initial damage intercept                              /0/
-        a20      Initial damage quadratic term
-        a1       Damage intercept                                      /0/
-        a2       Damage quadratic term                                 /0.00236/
-        a3       Damage exponent                                       /2.00/
+        quantile Non-CO2 forcing quantile                              /50/
+** Climate damage parameters:
+        a2       Quadratic multiplier (Howard & Sterner 2017 base)     /0.00236/
 ** Abatement cost
         expcost2  Exponent of control cost function                    /2.6/
-        pback     Cost of backstop 2020$ per tCO2 2015                 /679/
+        pback     Cost of backstop 2020$ per tCO2 2023                 /679/
         gback     Initial cost decline backstop cost per period        /.025/
-        limmiu    Upper limit on control rate after 2150               /1.2/
-        tnopol    Period before which no emissions controls base       /45/
+        limmiu    Upper limit on control rate                          /1.2/
         cprice0   Initial base carbon price (2010$ per tCO2)           /2/
         gcprice   Growth rate of base carbon price per year            /.02/
 
@@ -228,8 +213,9 @@ PARAMETERS
 * Program control definitions
         tfirst(t) = yes$(t.val eq 1);
         tlast(t)  = yes$(t.val eq card(t));
-        tearly(t) = yes$(t.val le 17);
-        tlate(t)  = yes$(t.val gt 17);
+        tearly(t) = yes$(t.val<28);
+        tlate(t)  = yes$(t.val>27);
+
 * Parameters for carbon cycle
         g1 = sum(box,
                 a(box) * tau(box) *
@@ -239,10 +225,9 @@ PARAMETERS
                 (1 - exp(-iirf_horizon/tau(box))))/ g1
              );
 * Further definitions of parameters
-        a20 = a2;
         sig0 = e0/(q0*(1-miu0));
 
-        ga(t)=ga0*exp(-dela*5*((t.val-1)));
+        ga(t)=ga0*exp(-dela*tstep*((t.val-1)));
         al("1") = a0; loop(t, al(t+1)=al(t)/((1-ga(t))););
         gsig("1")=gsigma1; loop(t,gsig(t+1)=gsig(t)*((1+dsig)**tstep) ;);
         sigma("1")=sig0;   loop(t,sigma(t+1)=(sigma(t)*exp(gsig(t)*tstep)););
@@ -254,7 +239,7 @@ PARAMETERS
         optlrsav = (dk + .004)/(dk + .004*elasmu + prstp)*gama;
 
 * Base Case Carbon Price
-        cpricebase(t)= cprice0*(1+gcprice)**(5*(t.val-1));
+        cpricebase(t)= cprice0*(1+gcprice)**(tstep*(t.val-1));
 
 VARIABLES
         MIU(t)          Emission control rate GHGs
@@ -292,7 +277,8 @@ VARIABLES
         iirf(t)         time-integrated impulse response
         atfrac(t)       Atmospheric share since 1850
         etree(t)        Land use emissions
-        cumetree(t)     Cumulative land use emissions;
+        cumetree(t)     Cumulative land use emissions
+        nonco2(t)       Non-CO2 forcing;
 
 NONNEGATIVE VARIABLES  MIU, T1, co2, MU, ML, Y, YGROSS, C, K, I, alpha, cprice;
 
@@ -323,6 +309,8 @@ EQUATIONS
         CBOX4EQ(t)       Carbon box 4 equation
         etreeeq(t)       land use eq
         cumetreeeq(t)    cumulative land use eq
+        nonco2eq1(t)     non-CO2 forcing eq
+        nonco2eq2(t)     non-CO2 forcing eq
 *constrainT  if we want to e.g. limit warming to 2 degrees
 
 *Economic variables
@@ -346,13 +334,15 @@ EQUATIONS
  eindeq(t)..          EIND(t)        =E= sigma(t) * YGROSS(t) * (1-(MIU(t)));
  ccaeq(t+1)..         CCA(t+1)       =E= CCA(t)+ EIND(t)*tstep/3.664;
  ccatoteq(t)..        CCATOT(t)      =E= CCA(t)+cumetree(t);
+ nonco2eq1(tearly)..  nonco2(tearly) =E= {nonco2_const} + ({nonco2_ffi})*EIND(tearly) + ({nonco2_quantile})*quantile + ({nonco2_period})*tearly.val;
+ nonco2eq2(tlate)..   nonco2(tlate)  =E= {nonco2_const} + ({nonco2_ffi})*EIND(tlate) + ({nonco2_quantile})*quantile + ({nonco2_period})*27;
  forceq(t)..          FORC(t)        =E= fco22x * ((log((CO2(t)/co2_1750))/log(2))) + nonco2(t);
- damfraceq(t) ..      DAMFRAC(t)     =E= (a1*T1(t))+(a2*T1(t)**a3) ;
+ damfraceq(t) ..      DAMFRAC(t)     =E= a2*T1(t)**2;
  dameq(t)..           DAMAGES(t)     =E= YGROSS(t) * DAMFRAC(t);
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
  mcabateeq(t)..       MCABATE(t)     =E= pbacktime(t) * MIU(t)**(expcost2-1);
  carbpriceeq(t)..     CPRICE(t)      =E= pbacktime(t) * (MIU(t))**(expcost2-1);
- etreeeq(t)..         etree(t)       =e= ({afolu_const} + ({afolu_ffi}*EIND(t)) + ({afolu_period}*t.val)) * (1 - 1/(1+exp(-0.75*(t.val-22))));
+ etreeeq(t)..         etree(t)       =e= ({afolu_const} + ({afolu_ffi})*EIND(t) + ({afolu_period})*t.val) * (1 - 1/(1+exp(-1.00*(t.val-35))));
  cumetreeeq(t+1)..    cumetree(t+1)  =e= cumetree(t) + etree(t)*tstep/3.664;
 
 * Climate and carbon cycle
@@ -390,8 +380,7 @@ CCA.lo(t)             = 0;
 
 * Control rate limits
 MIU.up(t)             = limmiu;
-MIU.up(t)$(t.val<5)  = 1;
-MIU.up(t)$(t.val=2)  = 0.3;
+MIU.up(t)$(t.val<10)  = 1;
 
 ** Upper and lower bounds for stability
 K.LO(t)         = 1;
@@ -418,9 +407,9 @@ lag10(t) =  yes$(t.val gt card(t)-10);
 S.FX(lag10(t)) = optlrsav;
 
 * Initial conditions
-CCA.FX(tfirst)    = 470.55;
+CCA.FX(tfirst)    = 478.6667;
 K.FX(tfirst)      = k0;
-co2.FX(tfirst)     = co2_2020;
+co2.FX(tfirst)     = co2_2023;
 T1.FX(tfirst)   = T1_0;
 T2.FX(tfirst)   = T2_0;
 T3.FX(tfirst)   = T3_0;
@@ -432,7 +421,7 @@ cbox1.fx(tfirst)  = icbox1;
 cbox2.fx(tfirst)  = icbox2;
 cbox3.fx(tfirst)  = icbox3;
 cbox4.fx(tfirst)  = icbox4;
-cumetree.fx(tfirst) = 190.9;
+cumetree.fx(tfirst) = 233.7448;
 
 ** Solution options
 option iterlim = 99999;
@@ -441,17 +430,6 @@ option solprint = on;
 option limrow = 0;
 option limcol = 0;
 model  DICE /all/;
-
-* For base run, this subroutine calculates Hotelling rents
-* Carbon price is maximum of Hotelling rent or baseline price
-* The cprice equation is different from 2013R. Not sure what went wrong.
-If (ifopt eq 0,
-       a2 = 0;
-       solve DICE maximizing UTILITY using nlp;
-       photel(t)=cprice.l(t);
-       a2 = a20;
-      cprice.up(t)$(t.val<tnopol+1) = max(photel(t),cpricebase(t));
-);
 
 miu.fx('1')$(ifopt=1) = miu0;
 solve DICE maximizing utility using nlp;
@@ -467,12 +445,12 @@ ppm(t)        = co2.l(t)/{carbon_convert};
 * For ALL relevant model outputs, see 'PutOutputAllT.gms' in the Include folder.
 * The statement at the end of the *.lst file "Output..." will tell you where to find the file.
 
-file results /"{here}/../data_output/dice/{config:07d}.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
+file results /"mean_config.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
 put results;
 put // "Period";
 Loop (T, put T.val);
 put / "Year" ;
-Loop (T, put (2015+(TSTEP*T.val) ));
+Loop (T, put (2020+(TSTEP*T.val) ));
 put / "Industrial Emissions GTCO2 per year" ;
 Loop (T, put EIND.l(T));
 put / "Atmospheric concentrations ppm" ;
@@ -524,7 +502,7 @@ Loop (T, put sigma(t));
 put / "Forcings" ;
 Loop (T, put forc.l(t));
 put / "Other Forcings" ;
-Loop (T, put nonco2(t));
+Loop (T, put nonco2.l(t));
 put / "Period utilty" ;
 Loop (T, put periodu.l(t));
 put / "Consumption" ;
@@ -556,34 +534,8 @@ Loop (T, put cbox4.l(t));
 put / "Objective" ;
 put utility.l;
 putclose;
-    '''
+'''
 
-    # write the script
-    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.gms'), 'w') as f:
-        f.write(template)
-
-    # run the command
-    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.out'), "w") as outfile:
-        subprocess.run(
-            [
-                'gams',
-                os.path.join(
-                    here,
-                    'gams_scripts',
-                    f'config{config:07d}.gms'
-                ),
-                '-o',
-                os.path.join(
-                    here,
-                    'gams_scripts',
-                    f'config{config:07d}.lst'
-                ),
-            ],
-            stdout = outfile,
-        )
-
-    # were results feasible?
-    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.lst')) as f:
-        output = f.read()
-        if " ** Infeasible solution. Reduced gradient less than tolerance." in output:
-            raise InfeasibleSolutionError(run)
+# write the script
+with open(os.path.join(here, 'mean_config.gms'), 'w') as f:
+    f.write(template)
