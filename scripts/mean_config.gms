@@ -108,7 +108,7 @@ PARAMETERS
         fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /3.866891873961772/
         quantile Non-CO2 forcing quantile                              /50/
 ** Climate damage parameters:
-        a2       Quadratic multiplier (Howard & Sterner 2017 base)     /0.00236/
+        a2       Quadratic multiplier (Howard & Sterner 2017 base)     /0.008/
 ** Abatement cost
         expcost2  Exponent of control cost function                    /2.6/
         pback     Cost of backstop 2020$ per tCO2 2023                 /679/
@@ -141,7 +141,9 @@ PARAMETERS
         scc(t)        Social cost of carbon
         cpricebase(t) Carbon price in base case
         photel(t)     Carbon Price under no damages (Hotelling rent condition)
-        ppm(t)        Atmospheric concentrations parts per million;
+        ppm(t)        Atmospheric concentrations parts per million
+        so2(t)        Emissions of SO2
+        ch4(t)        Emissions of CH4;
 
 * Program control definitions
         tfirst(t) = yes$(t.val eq 1);
@@ -374,6 +376,12 @@ solve DICE maximizing utility using nlp;
 scc(t)        = -1000*eeq.m(t)/(.00001+cc.m(t));
 ppm(t)        = co2.l(t)/2.1290606558508802;
 
+** CALCULATE NON-CO2 EMISSIONS
+so2(tearly) = 65.8889 + 0.4514*eind.l(tearly) - 5.3944*tearly.val + 0.1335*tearly.val**2;
+so2(tlate)  = 65.8889 + 0.4514*eind.l(tlate) - 5.3944*27 + 0.1335*27**2;
+ch4(tearly) = 203.4439 + 4.2581*eind.l(tearly) - 5.2576*tearly.val + 0.1471*tearly.val**2;
+ch4(tlate)  = 203.4439 + 4.2581*eind.l(tlate) - 5.2576*27 + 0.1471*27**2;
+
 * Produces a file "Dice2016R-091916ap.csv" in the base directory
 * For ALL relevant model outputs, see 'PutOutputAllT.gms' in the Include folder.
 * The statement at the end of the *.lst file "Output..." will tell you where to find the file.
@@ -464,6 +472,10 @@ put / "cbox3" ;
 Loop (T, put cbox3.l(t));
 put / "cbox4" ;
 Loop (T, put cbox4.l(t));
+put / "so2" ;
+Loop (T, put so2(t));
+put / "ch4" ;
+Loop (T, put ch4(t));
 put / "Objective" ;
 put utility.l;
 putclose;
