@@ -24,17 +24,17 @@ configs = df_configs.index
 os.makedirs(os.path.join(here, 'gams_scripts'), exist_ok=True)
 os.makedirs(os.path.join(here, '..', 'data_output', 'dice'), exist_ok=True)
 
-df_nonco2_2023 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_ssp245.csv'), index_col=0)
+df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_future_ssp245.csv'), index_col=0)
 df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'gas_partitions_ssp245.csv'), index_col=0)
 df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'climate_response_params.csv'), index_col=0)
 df_co2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'co2_forcing_ssp245.csv'), index_col=0)
 df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp245.csv'), index_col=0)
 df_afolu = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'afolu_regression.csv'), index_col=0)
-df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'nonco2_regression.csv'), index_col=0)
-
-order = df_nonco2_2023.loc[:, '0'].argsort()
-ranks = order.argsort()
-quantiles = ranks/10
+df_nonco2_reg = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'nonco2_regression.csv'), index_col=0)
+#
+# order = df_nonco2_reg.loc[:, '0'].argsort()
+# ranks = order.argsort()
+# quantiles = ranks/10
 
 n_configs = 1001
 
@@ -62,10 +62,10 @@ pop = np.median(population_sample_out, axis=0)
 afolu_const = df_afolu.loc['constant', 'coefficient']
 afolu_ffi = df_afolu.loc['CO2_EIP', 'coefficient']
 afolu_period = df_afolu.loc['period', 'coefficient']
-nonco2_const = df_nonco2.loc['Intercept', 'coefficient']
-nonco2_ffi = df_nonco2.loc['ffi', 'coefficient']
-nonco2_period = df_nonco2.loc['period', 'coefficient']
-nonco2_quantile = df_nonco2.loc['quantile', 'coefficient']
+nonco2_const = df_nonco2_reg.loc['Intercept', 'coefficient']
+nonco2_ffi = df_nonco2_reg.loc['ffi', 'coefficient']
+nonco2_period = df_nonco2_reg.loc['period', 'coefficient']
+nonco2_quantile = df_nonco2_reg.loc['quantile', 'coefficient']
 
 for run, config in tqdm(enumerate(configs[:n_configs]), total=n_configs):
     t1 = df_temp.loc[config, 'mixed_layer']
@@ -83,7 +83,7 @@ for run, config in tqdm(enumerate(configs[:n_configs]), total=n_configs):
     cbox4 = df_cbox.loc[config, 'fast']
     co2_2023 = df_cbox.loc[config, 'co2_2023']
     co2_1750 = df_configs.loc[config, 'co2_concentration_1750']
-    quantile = quantiles.loc[config]
+    nonco2 = df_nonco2.loc[config, :].values
 
     template = f'''
 $ontext
@@ -98,7 +98,7 @@ $offtext
 
 $title        DICE-2016R-FAIR June 2022
 
-set     t        Time periods (5 years per period)                     /1*160/
+set     t        Time periods (3 years per period)                     /1*160/
         box      Carbon box                                            /1*4/
 
 PARAMETERS
@@ -109,8 +109,8 @@ PARAMETERS
 ** If optimal control
         ifopt    Indicator where optimized is 1 and base is 0          /1/
 ** Preferences
-        elasmu   Elasticity of marginal utility of consumption         /1.24/
-        prstp    Initial rate of social time preference per year       /0.002/
+        elasmu   Elasticity of marginal utility of consumption         /1.45/
+        prstp    Initial rate of social time preference per year       /0.015/
 ** Technology and population (updated by CS)
         gama     Capital elasticity in production function             /0.300/
         dk       Depreciation rate on capital (per year)               /0.100/
@@ -193,9 +193,40 @@ PARAMETERS
         EBM_B2   Forcing component to ocean layer                      /{cr[10]}/
         EBM_B3   Forcing component to ocean layer                      /{cr[11]}/
         fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /{f2x}/
-        quantile Non-CO2 forcing quantile                              /{quantile}/
+        nonco2(t) /1 {nonco2[0]}, 2 {nonco2[1]}, 3 {nonco2[2]}, 4 {nonco2[3]}, 5 {nonco2[4]},
+                  6 {nonco2[5]}, 7 {nonco2[6]}, 8 {nonco2[7]}, 9 {nonco2[8]}, 10 {nonco2[9]},
+                 11 {nonco2[10]}, 12 {nonco2[11]}, 13 {nonco2[12]}, 14 {nonco2[13]}, 15 {nonco2[14]},
+                 16 {nonco2[15]}, 17 {nonco2[16]}, 18 {nonco2[17]}, 19 {nonco2[18]}, 20 {nonco2[19]},
+                 21 {nonco2[20]}, 22 {nonco2[21]}, 23 {nonco2[22]}, 24 {nonco2[23]}, 25 {nonco2[24]},
+                 26 {nonco2[25]}, 27 {nonco2[26]}, 28 {nonco2[27]}, 29 {nonco2[28]}, 30 {nonco2[29]},
+                 31 {nonco2[30]}, 32 {nonco2[31]}, 33 {nonco2[32]}, 34 {nonco2[33]}, 35 {nonco2[34]},
+                 36 {nonco2[35]}, 37 {nonco2[36]}, 38 {nonco2[37]}, 39 {nonco2[38]}, 40 {nonco2[39]},
+                 41 {nonco2[40]}, 42 {nonco2[41]}, 43 {nonco2[42]}, 44 {nonco2[43]}, 45 {nonco2[44]},
+                 46 {nonco2[45]}, 47 {nonco2[46]}, 48 {nonco2[47]}, 49 {nonco2[48]}, 50 {nonco2[49]},
+                 51 {nonco2[50]}, 52 {nonco2[51]}, 53 {nonco2[52]}, 54 {nonco2[53]}, 55 {nonco2[54]},
+                 56 {nonco2[55]}, 57 {nonco2[56]}, 58 {nonco2[57]}, 59 {nonco2[58]}, 60 {nonco2[59]},
+                 61 {nonco2[60]}, 62 {nonco2[61]}, 63 {nonco2[62]}, 64 {nonco2[63]}, 65 {nonco2[64]},
+                 66 {nonco2[65]}, 67 {nonco2[66]}, 68 {nonco2[67]}, 69 {nonco2[68]}, 70 {nonco2[69]},
+                 71 {nonco2[70]}, 72 {nonco2[71]}, 73 {nonco2[72]}, 74 {nonco2[73]}, 75 {nonco2[74]},
+                 76 {nonco2[75]}, 77 {nonco2[76]}, 78 {nonco2[77]}, 79 {nonco2[78]}, 80 {nonco2[79]},
+                 81 {nonco2[80]}, 82 {nonco2[81]}, 83 {nonco2[82]}, 84 {nonco2[83]}, 85 {nonco2[84]},
+                 86 {nonco2[85]}, 87 {nonco2[86]}, 88 {nonco2[87]}, 89 {nonco2[88]}, 90 {nonco2[89]},
+                 91 {nonco2[90]}, 92 {nonco2[91]}, 93 {nonco2[92]}, 94 {nonco2[93]}, 95 {nonco2[94]},
+                 96 {nonco2[95]}, 97 {nonco2[96]}, 98 {nonco2[97]}, 99 {nonco2[98]}, 100 {nonco2[99]},
+                 101 {nonco2[100]}, 102 {nonco2[101]}, 103 {nonco2[102]}, 104 {nonco2[103]}, 105 {nonco2[104]},
+                 106 {nonco2[105]}, 107 {nonco2[106]}, 108 {nonco2[107]}, 109 {nonco2[108]}, 110 {nonco2[109]},
+                 111 {nonco2[110]}, 112 {nonco2[111]}, 113 {nonco2[112]}, 114 {nonco2[113]}, 115 {nonco2[114]},
+                 116 {nonco2[115]}, 117 {nonco2[116]}, 118 {nonco2[117]}, 119 {nonco2[118]}, 120 {nonco2[119]},
+                 121 {nonco2[120]}, 122 {nonco2[121]}, 123 {nonco2[122]}, 124 {nonco2[123]}, 125 {nonco2[124]},
+                 126 {nonco2[125]}, 127 {nonco2[126]}, 128 {nonco2[127]}, 129 {nonco2[128]}, 130 {nonco2[129]},
+                 131 {nonco2[130]}, 132 {nonco2[131]}, 133 {nonco2[132]}, 134 {nonco2[133]}, 135 {nonco2[134]},
+                 136 {nonco2[135]}, 137 {nonco2[136]}, 138 {nonco2[137]}, 139 {nonco2[138]}, 140 {nonco2[139]},
+                 141 {nonco2[140]}, 142 {nonco2[141]}, 143 {nonco2[142]}, 144 {nonco2[143]}, 145 {nonco2[144]},
+                 146 {nonco2[145]}, 147 {nonco2[146]}, 148 {nonco2[147]}, 149 {nonco2[148]}, 150 {nonco2[149]},
+                 151 {nonco2[150]}, 152 {nonco2[151]}, 153 {nonco2[152]}, 154 {nonco2[153]}, 155 {nonco2[154]},
+                 156 {nonco2[155]}, 157 {nonco2[156]}, 158 {nonco2[157]}, 159 {nonco2[158]}, 160 {nonco2[159]}/
 ** Climate damage parameters:
-        a2       Quadratic multiplier (Howard & Sterner 2017 base)     /0.007438/
+        a2       Quadratic multiplier (Howard & Sterner 2017 base)     /0.00236/
 ** Abatement cost
         expcost2  Exponent of control cost function                    /2.6/
         pback     Cost of backstop 2020$ per tCO2 2023                 /679/
@@ -228,13 +259,16 @@ PARAMETERS
         scc(t)        Social cost of carbon
         cpricebase(t) Carbon price in base case
         photel(t)     Carbon Price under no damages (Hotelling rent condition)
-        ppm(t)        Atmospheric concentrations parts per million;
+        ppm(t)        Atmospheric concentrations parts per million
+        so2(t)        Emissions of SO2
+        ch4(t)        Emissions of CH4;
 
 * Program control definitions
         tfirst(t) = yes$(t.val eq 1);
         tlast(t)  = yes$(t.val eq card(t));
         tearly(t) = yes$(t.val<28);
         tlate(t)  = yes$(t.val>27);
+
 * Parameters for carbon cycle
         g1 = sum(box,
                 a(box) * tau(box) *
@@ -258,7 +292,7 @@ PARAMETERS
         optlrsav = (dk + .004)/(dk + .004*elasmu + prstp)*gama;
 
 * Base Case Carbon Price
-        cpricebase(t)= cprice0*(1+gcprice)**(5*(t.val-1));
+        cpricebase(t)= cprice0*(1+gcprice)**(tstep*(t.val-1));
 
 VARIABLES
         MIU(t)          Emission control rate GHGs
@@ -296,8 +330,7 @@ VARIABLES
         iirf(t)         time-integrated impulse response
         atfrac(t)       Atmospheric share since 1850
         etree(t)        Land use emissions
-        cumetree(t)     Cumulative land use emissions
-        nonco2(t)       Non-CO2 forcing;
+        cumetree(t)     Cumulative land use emissions;
 
 NONNEGATIVE VARIABLES  MIU, T1, co2, MU, ML, Y, YGROSS, C, K, I, alpha, cprice;
 
@@ -328,8 +361,8 @@ EQUATIONS
         CBOX4EQ(t)       Carbon box 4 equation
         etreeeq(t)       land use eq
         cumetreeeq(t)    cumulative land use eq
-        nonco2eq1(t)     non-CO2 forcing eq
-        nonco2eq2(t)     non-CO2 forcing eq
+*        nonco2eq1(t)     non-CO2 forcing eq
+*        nonco2eq2(t)     non-CO2 forcing eq
 *constrainT  if we want to e.g. limit warming to 2 degrees
 
 *Economic variables
@@ -353,8 +386,8 @@ EQUATIONS
  eindeq(t)..          EIND(t)        =E= sigma(t) * YGROSS(t) * (1-(MIU(t)));
  ccaeq(t+1)..         CCA(t+1)       =E= CCA(t)+ EIND(t)*tstep/3.664;
  ccatoteq(t)..        CCATOT(t)      =E= CCA(t)+cumetree(t);
- nonco2eq1(tearly)..  nonco2(tearly) =E= {nonco2_const} + ({nonco2_ffi})*EIND(tearly) + ({nonco2_quantile})*quantile + ({nonco2_period})*tearly.val;
- nonco2eq2(tlate)..   nonco2(tlate)  =E= {nonco2_const} + ({nonco2_ffi})*EIND(tlate) + ({nonco2_quantile})*quantile + ({nonco2_period})*27;
+* nonco2eq1(tearly)..  nonco2(tearly) =E= {nonco2_const} + ({nonco2_ffi})*EIND(tearly) + ({nonco2_quantile})*quantile + ({nonco2_period})*tearly.val;
+* nonco2eq2(tlate)..   nonco2(tlate)  =E= {nonco2_const} + ({nonco2_ffi})*EIND(tlate) + ({nonco2_quantile})*quantile + ({nonco2_period})*27;
  forceq(t)..          FORC(t)        =E= fco22x * ((log((CO2(t)/co2_1750))/log(2))) + nonco2(t);
  damfraceq(t) ..      DAMFRAC(t)     =E= a2*T1(t)**2;
  dameq(t)..           DAMAGES(t)     =E= YGROSS(t) * DAMFRAC(t);
@@ -399,7 +432,8 @@ CCA.lo(t)             = 0;
 
 * Control rate limits
 MIU.up(t)             = limmiu;
-MIU.up(t)$(t.val<10)  = 1;
+MIU.up(t)$(t.val<8)   = 0.15*t.val;
+*MIU.up(t)$(t.val<10)  = 1;
 
 ** Upper and lower bounds for stability
 K.LO(t)         = 1;
@@ -459,6 +493,12 @@ solve DICE maximizing utility using nlp;
 * Calculate social cost of carbon and other variables
 scc(t)        = -1000*eeq.m(t)/(.00001+cc.m(t));
 ppm(t)        = co2.l(t)/{carbon_convert};
+
+** CALCULATE NON-CO2 EMISSIONS
+so2(tearly) = 65.8889 + 0.4514*eind.l(tearly) - 5.3944*tearly.val + 0.1335*tearly.val**2;
+so2(tlate)  = 65.8889 + 0.4514*eind.l(tlate) - 5.3944*27 + 0.1335*27**2;
+ch4(tearly) = 203.4439 + 4.2581*eind.l(tearly) - 5.2576*tearly.val + 0.1471*tearly.val**2;
+ch4(tlate)  = 203.4439 + 4.2581*eind.l(tlate) - 5.2576*27 + 0.1471*27**2;
 
 * Produces a file "Dice2016R-091916ap.csv" in the base directory
 * For ALL relevant model outputs, see 'PutOutputAllT.gms' in the Include folder.
@@ -521,7 +561,7 @@ Loop (T, put sigma(t));
 put / "Forcings" ;
 Loop (T, put forc.l(t));
 put / "Other Forcings" ;
-Loop (T, put nonco2.l(t));
+Loop (T, put nonco2(t));
 put / "Period utilty" ;
 Loop (T, put periodu.l(t));
 put / "Consumption" ;
@@ -550,6 +590,10 @@ put / "cbox3" ;
 Loop (T, put cbox3.l(t));
 put / "cbox4" ;
 Loop (T, put cbox4.l(t));
+put / "so2" ;
+Loop (T, put so2(t));
+put / "ch4" ;
+Loop (T, put ch4(t));
 put / "Objective" ;
 put utility.l;
 putclose;
