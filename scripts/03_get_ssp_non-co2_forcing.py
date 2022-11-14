@@ -34,27 +34,29 @@ solar_forcing = df_natural['solar'].loc[1750.5:2023.5].values
 volcanic_forcing = df_natural['volcanic'].loc[1750.5:2023.5].values
 
 start = 1750
-end = 2023
+end_hist = 2023
+end = 2500
 timestep = 3
 
-n_hist = (end-start)//timestep+1
+n_hist = (end_hist-start)//timestep+1
+n_fut = (end-end_hist)//timestep+1
+n_tot = (end-start)//timestep+1
 
-solar_3yr = np.zeros(n_hist)
-volcanic_3yr = np.zeros(n_hist)
+solar_3yr = np.zeros(n_tot)
+volcanic_3yr = np.zeros(n_tot)
 solar_3yr[0] = solar_forcing[0]
 volcanic_3yr[0] = volcanic_forcing[0]
 for period in range(1, n_hist):
     solar_3yr[period] = solar_forcing[(timestep*period-2):(timestep*period+1)].mean()
     volcanic_3yr[period] = volcanic_forcing[(timestep*period-2):(timestep*period+1)].mean()
 
-## future solar forcing amplitude to be zero from 2020
-#solar_3yr[54:] = 0
+# future solar forcing amplitude to be zero from 2023 - volcanic is zero by construction
 
 species, properties = read_properties()
 df_configs =pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
 configs = np.array(list(df_configs.index))
 
-trend_shape = np.ones(n_hist)
+trend_shape = np.ones(n_tot)
 trend_shape[:n_hist] = np.linspace(0, 1, n_hist)
 
 f = FAIR(ch4_method='Thornhill2021')
@@ -66,21 +68,8 @@ f.allocate()
 
 f.fill_from_rcmip()
 
-# insert GCP emissions here, overriding RCMIP
-# NOTE: the AFOLU emissions I have infilled from 1750-1849, using the constraint that
-# 1750-1850 cumulative AFOLU was 30 PgC (GCP, 2022). I used a linear ramp, and it
-# looks defensible.
-df_co2 = pd.read_csv(os.path.join(here, '..', 'data_input', 'global-carbon-project', 'co2_emissions_1750-2022_prelim.csv'))
-co2_ffi = df_co2['fossil emissions including carbonation'].values
-co2_afolu = df_co2['land-use change emissions'].values
-co2_ffi_3yr = np.zeros(n_hist-1)
-co2_afolu_3yr = np.zeros(n_hist-1)
-for period in range(n_hist-1):
-    co2_afolu_3yr[period] = co2_afolu[(timestep*period):(timestep*period+3)].mean() * 44.009/12.011
-    co2_ffi_3yr[period] = co2_ffi[(timestep*period):(timestep*period+3)].mean() * 44.009/12.011
-
-fill(f.emissions, co2_ffi_3yr[:, None, None], specie='CO2 FFI')
-fill(f.emissions, co2_afolu_3yr[:, None, None], specie='CO2 AFOLU')
+# Until we harmonize the non-CO2 emissions separately, we don't need to override the
+# RCMIP emissions going in here.
 
 calibrated_f4co2_mean = df_configs['F_4xCO2'].mean()
 
@@ -107,8 +96,7 @@ fill(f.climate_configs['forcing_4co2'], 2 * erf_2co2 * (1 + 0.561*(calibrated_f4
 f.fill_species_configs()
 
 # carbon cycle
-# TODO: new batch of configs for GCP. For now, modify r0
-fill(f.species_configs['iirf_0'], df_configs.loc[configs, 'r0'].values.squeeze()-1.5, specie='CO2')
+fill(f.species_configs['iirf_0'], df_configs.loc[configs, 'r0'].values.squeeze(), specie='CO2')
 fill(f.species_configs['iirf_airborne'], df_configs.loc[configs, 'rA'].values.squeeze(), specie='CO2')
 fill(f.species_configs['iirf_uptake'], df_configs.loc[configs, 'rU'].values.squeeze(), specie='CO2')
 fill(f.species_configs['iirf_temperature'], df_configs.loc[configs, 'rT'].values.squeeze(), specie='CO2')
@@ -161,21 +149,44 @@ initialise(f.airborne_emissions, 0)
 
 f.run()
 
+fig, ax = pl.subplots(1, 4, figsize=(16, 5))
+
+for i in range(4):
+    ax[i].fill_between(
+        f.timebounds,
+        np.min(f.temperature[:, i, :, 0]-f.temperature[33:51, i, :, 0].mean(axis=0), axis=1),
+        np.max(f.temperature[:, i, :, 0]-f.temperature[33:51, i, :, 0].mean(axis=0), axis=1),
+        color='#000000',
+        alpha=0.2,
+    )
+    ax[i].fill_between(
+        f.timebounds,
+        np.percentile(f.temperature[:, i, :, 0]-f.temperature[33:51, i, :, 0].mean(axis=0), 5, axis=1),
+        np.percentile(f.temperature[:, i, :, 0]-f.temperature[33:51, i, :, 0].mean(axis=0), 95, axis=1),
+        color='#000000',
+        alpha=0.2,
+    )
+    ax[i].fill_between(
+        f.timebounds,
+        np.percentile(f.temperature[:, i, :, 0]-f.temperature[33:51, i, :, 0].mean(axis=0), 16, axis=1),
+        np.percentile(f.temperature[:, i, :, 0]-f.temperature[33:51, i, :, 0].mean(axis=0), 84, axis=1),
+        color='#000000',
+        alpha=0.2,
+    )
+    ax[i].plot(
+        f.timebounds,
+        np.median(f.temperature[:, i, :, 0]-f.temperature[33:51, i, :, 0].mean(axis=0), axis=1),
+        color='#000000',
+    )
+    ax[i].set_xlim(1750,2500)
+    ax[i].set_ylim(-1, 10)
+    ax[i].axhline(0, color='k', ls=":", lw=0.5)
+    ax[i].axhline(1.5, color='k', ls=":", lw=0.5)
+    ax[i].axhline(2, color='k', ls=":", lw=0.5)
+    ax[i].set_title(scenarios[i])
+pl.suptitle('Temperature anomaly')
+pl.show()
+
 for i, scenario in enumerate(scenarios):
-    df_cc = pd.DataFrame(f.gas_partitions.loc[dict(scenario=scenario, specie='CO2')] * 12.011 / 44.009, columns=['geological', 'slow', 'mid', 'fast'], index=configs)
-    df_co2 = pd.DataFrame(f.concentration.loc[dict(scenario=scenario, specie='CO2', timebounds=2023)], columns=['co2_2023'], index=configs)
-    df = pd.concat([df_cc, df_co2], axis=1)
-    df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'gas_partitions_{scenario}.csv'))
-
-    # calculate "effective" F2x for translation from Meinshausen formula in FaIR to log formula in DICE
-    effective_f2x = f.forcing[-1, i, :, 2] * np.log(2) / np.log(f.concentration[-1, i, :, 2] / f.concentration[0, i, :, 2])
-    df = pd.DataFrame(np.array([f.forcing[-1, i, :, 2], effective_f2x]).T, index=configs, columns=['co2_forcing_2023', 'effective_f2x'])
-    df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'co2_forcing_{scenario}.csv'))
-
-    # save non-CO2 forcing in 2023
-    df = pd.DataFrame((np.nansum(f.forcing[-1, i, :, :], axis=-1) - f.forcing[-1, i, :, 2] - f.forcing[-3, i, :, 54:56].mean(axis=-1)), index=configs)
-    df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'anthropogenic_non-co2_forcing_{scenario}.csv'))
-
-    # use surface layer 1850-1900 offset; apply same offset to all layers to preserve differences between layers that drives diffusion
-    df = pd.DataFrame(f.temperature[-1, i, :, :]-f.temperature[33:51, i, :, 0].mean(axis=0), index=configs, columns=['mixed_layer', 'mid_ocean', 'deep_ocean'])
-    df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'temperature_{scenario}.csv'))
+    df = pd.DataFrame((np.nansum(f.forcing[n_hist-1:, i, :, :], axis=-1) - f.forcing[n_hist-1:, i, :, 2] - f.forcing[n_hist-1:, i, :, 54:56].mean(axis=-1)), index=range(end_hist, end+1, timestep), columns=configs).T
+    df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'anthropogenic_non-co2_forcing_future_{scenario}.csv'))
