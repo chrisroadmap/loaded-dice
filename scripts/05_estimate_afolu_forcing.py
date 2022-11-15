@@ -30,7 +30,8 @@ here = os.path.dirname(os.path.realpath(__file__))
 ar6 = pd.read_csv(os.path.join(here, "..", "data_input", "wg3", "co2_ffi_afolu_harmonized.csv"))
 ar6 = ar6.loc[
     (ar6['variable']=="Emissions|CO2|Energy and Industrial Processes") |
-    (ar6['variable']=="Emissions|CO2|AFOLU")
+    (ar6['variable']=="Emissions|CO2|AFOLU") #&
+#    (ar6['model'].str.startswith('IMAGE'))
 , :]
 
 ar6_edit = copy.deepcopy(ar6)
@@ -47,7 +48,7 @@ x = np.empty((0, 2))
 for year in range(2020, 2105, 10):
     afolu = ar6_edit.loc[(ar6_edit['variable']=='Emissions|CO2|AFOLU'), str(year)].values/1000
     ffi   = ar6_edit.loc[(ar6_edit['variable']=='Emissions|CO2|Energy and Industrial Processes'), str(year)].values/1000
-    period = (year-2020)/5+1 * np.ones_like(ffi)
+    period = (year-2023)/3+1 * np.ones_like(ffi)
     y = np.append(y, afolu)
     x = np.append(x, np.column_stack([ffi, period]), axis=0)
     if year>2020:

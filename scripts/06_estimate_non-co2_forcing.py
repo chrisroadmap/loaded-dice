@@ -188,7 +188,7 @@ for year in range(2020, 2101, 10):
     nonco2_50 = non_co2_smoothed_50[year-2000, :]
     nonco2_95 = non_co2_smoothed_95[year-2000, :]
     ffi       = ar6_50_edit.loc[(ar6_50_edit['variable']=='Emissions|CO2|Energy and Industrial Processes'), str(year)].values/1000
-    period    = (year-2015)/5 * np.ones_like(ffi)
+    period    = ((year-2023)/3 + 1) * np.ones_like(ffi)
     fives     = np.ones_like(ffi) * 5
     fiftys    = np.ones_like(ffi) * 50
     ninetyfives = np.ones_like(ffi) * 95
