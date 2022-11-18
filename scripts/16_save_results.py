@@ -39,6 +39,8 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     outputs['social_cost_of_carbon'] = np.ones((160, ensemble_size)) * np.nan
     outputs['CO2_FFI_emissions'] = np.ones((160, ensemble_size)) * np.nan
     outputs['radiative_forcing'] = np.ones((160, ensemble_size)) * np.nan
+    outputs['consumption_per_capita'] = np.ones((160, ensemble_size)) * np.nan
+    outputs['interest_rate'] = np.ones((160, ensemble_size)) * np.nan
 
     # we still need the try-except because for some very strange reason 117814 failed silently in DICE
     for run, config in enumerate(configs[:ensemble_size]):
@@ -49,6 +51,8 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
             outputs['social_cost_of_carbon'][:, run] = df.loc['Social cost of carbon']
             outputs['CO2_FFI_emissions'][:, run] = df.loc['Industrial Emissions GTCO2 per year']
             outputs['radiative_forcing'][:, run] = df.loc['Forcings']
+            outputs['consumption_per_capita'][:, run] = df.loc['Consumption Per Capita ']
+            outputs['interest_rate'][:, run] = df.loc['Interest Rate ']
         except:
             pass
 
@@ -58,6 +62,6 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     print('temperature peak', np.nanpercentile(np.max(outputs['temperature'], axis=0), (5, 50, 95)))  # peak temperature
     print('forcing     2101', np.nanpercentile(outputs['radiative_forcing'][27, :], (5, 50, 95)))  # radiative forcing 2100
 
-    for variable in ['CO2_concentration', 'temperature', 'social_cost_of_carbon', 'CO2_FFI_emissions', 'radiative_forcing']:
+    for variable in ['CO2_concentration', 'temperature', 'social_cost_of_carbon', 'CO2_FFI_emissions', 'radiative_forcing', 'consumption_per_capita', 'interest_rate']:
         df = pd.DataFrame(outputs[variable].T, columns = np.arange(2023, 2503, 3), index = configs)
         df.to_csv(os.path.join(here, '..', 'data_output', 'results', f'{scenario}__{variable}.csv'))

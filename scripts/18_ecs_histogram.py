@@ -1,6 +1,7 @@
 import os
 
 import matplotlib.pyplot as pl
+from matplotlib.ticker import ScalarFormatter
 import numpy as np
 import pandas as pd
 
@@ -44,8 +45,8 @@ for i, config in enumerate(configs):
     ebm.emergent_parameters()
     ecs[i], tcr[i] = (ebm.ecs, ebm.tcr)
 
-pl.rcParams['figure.figsize'] = (9/2.54, 9/2.54)
-pl.rcParams['font.size'] = 9
+pl.rcParams['figure.figsize'] = (20/2.54, 20/2.54)
+pl.rcParams['font.size'] = 20
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'
 pl.rcParams['ytick.minor.visible'] = True
@@ -63,26 +64,14 @@ outputs = {}
 
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     outputs[scenario] = {}
-    dfs = []
-    outputs[scenario]['SCC'] = np.ones((ensemble_size)) * np.nan
-    outputs[scenario]['infeasible'] = np.zeros((ensemble_size), dtype=bool)
-    for run, config in enumerate(configs[:ensemble_size]):
-        try:
-            dfs.append(pd.read_csv(os.path.join(here, "..", "data_output", scenario, f"{config:07d}.csv"), index_col=0))
-        except:
-            outputs[scenario]['infeasible'][run] = True
-            pass
-
-    for run in range(ensemble_size):
-        try:
-            outputs[scenario]['SCC'][run] = dfs[run].loc['Social cost of carbon'].values[0]
-        except:
-            pass
+    for variable in ['social_cost_of_carbon']:
+        df = pd.read_csv(os.path.join(here, '..', 'data_output', 'results', f'{scenario}__{variable}.csv'), index_col=0)
+        outputs[scenario][variable] = df[:].T.values[0, :]
 
 labels = {
-    'dice': "'Optimal' (all feasible)",
-    'dice_below2deg': "2°C feasible",
-    'dice_1p5deglowOS': "1.5°C feasible"
+    'dice': "'Nordhaus optimal'",
+    'dice_below2deg': "Well-below 2°C",
+    'dice_1p5deglowOS': "1.5°C-low overshoot"
 }
 
 colors = {
@@ -93,41 +82,15 @@ colors = {
 
 fig, ax = pl.subplots(1, 1)
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
-    ax.hist(ecs[~outputs[scenario]['infeasible']], bins=np.arange(0, 8, 0.1), alpha=0.8, label=labels[scenario], color=colors[scenario])
+    ax.scatter(ecs, outputs[scenario]['social_cost_of_carbon'], alpha=0.3, label=labels[scenario], color=colors[scenario])
+pl.yscale('log')
 ax.set_xlim(1, 7)
-ax.set_ylim(0, 60)
-ax.set_title("Climate sensitivity in feasible scenarios")
-ax.set_ylabel("Count")
-ax.set_xlabel("ECS, °C")
-ax.legend()
-fig.tight_layout()
-pl.savefig(os.path.join(here, '..', 'figures', f'ecs_feasibility.png'))
-pl.savefig(os.path.join(here, '..', 'figures', f'ecs_feasibility.pdf'))
-pl.show()
-
-fig, ax = pl.subplots(1, 1)
-for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
-    ax.hist(tcr[~outputs[scenario]['infeasible']], bins=np.arange(0, 8, 0.05), alpha=0.8, label=labels[scenario], color=colors[scenario])
-ax.set_xlim(0.8, 3.2)
-ax.set_ylim(0, 70)
-ax.set_title("Transient climate response in feasible scenarios")
-ax.set_ylabel("Count")
-ax.set_xlabel("TCR, °C")
-ax.legend()
-fig.tight_layout()
-pl.savefig(os.path.join(here, '..', 'figures', f'tcr_feasibility_{scenario}.png'))
-pl.savefig(os.path.join(here, '..', 'figures', f'tcr_feasibility_{scenario}.pdf'))
-pl.show()
-
-fig, ax = pl.subplots(1, 1)
-for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
-    ax.scatter(ecs, outputs[scenario]['SCC'], alpha=0.3, label=labels[scenario], color=colors[scenario])
-ax.set_xlim(1, 7)
-ax.set_ylim(-50, 1000)
-ax.set_title("Equilibrium climate sensitivity in feasible scenarios")
+ax.set_ylim(5, 10000)
+ax.set_title("Equilibrium climate sensitivity")
 ax.set_ylabel("Social cost of carbon, 2020\$")
 ax.set_xlabel("ECS, °C")
-ax.legend()
+ax.yaxis.set_major_formatter(ScalarFormatter())
+ax.legend(fontsize=14, frameon=False)
 fig.tight_layout()
 pl.savefig(os.path.join(here, '..', 'figures', f'ecs_scc.png'))
 pl.savefig(os.path.join(here, '..', 'figures', f'ecs_scc.pdf'))
@@ -135,13 +98,15 @@ pl.show()
 
 fig, ax = pl.subplots(1, 1)
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
-    ax.scatter(tcr, outputs[scenario]['SCC'], alpha=0.3, label=labels[scenario], color=colors[scenario])
+    ax.scatter(tcr, outputs[scenario]['social_cost_of_carbon'], alpha=0.3, label=labels[scenario], color=colors[scenario])
+pl.yscale('log')
 ax.set_xlim(0.8, 3.2)
-ax.set_ylim(-50, 1000)
-ax.set_title("Transient climate response in feasible scenarios")
+ax.set_ylim(5, 10000)
+ax.set_title("Transient climate response")
 ax.set_ylabel("Social cost of carbon, 2020\$")
 ax.set_xlabel("TCR, °C")
-ax.legend()
+ax.yaxis.set_major_formatter(ScalarFormatter())
+ax.legend(fontsize=14, frameon=False)
 fig.tight_layout()
 pl.savefig(os.path.join(here, '..', 'figures', f'tcr_scc.png'))
 pl.savefig(os.path.join(here, '..', 'figures', f'tcr_scc.pdf'))
