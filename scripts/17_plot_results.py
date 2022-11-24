@@ -82,7 +82,7 @@ ylim = {
     'radiative_forcing': (0, 7)
 }
 labels = {
-    'dice': "'Nordhaus optimal'",
+    'dice': "DICE default",
     'dice_below2deg': "Well-below 2°C",
     'dice_1p5deglowOS': "1.5°C-low overshoot"
 }
