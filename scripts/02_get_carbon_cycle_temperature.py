@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import pandas as pd
+import pooch
 import matplotlib.pyplot as pl
 from tqdm import tqdm
 from scipy.interpolate import interp1d
@@ -29,9 +30,8 @@ erf_2co2 = meinshausen2020(
 scenarios = ['ssp119', 'ssp126', 'ssp245', 'ssp370']
 
 # Solar and volcanic forcing
-df_natural = pd.read_csv(os.path.join(here, '..', 'data_input', 'wg1', 'natural_erf.csv'), index_col=0)
-solar_forcing = df_natural['solar'].loc[1750.5:2023.5].values
-volcanic_forcing = df_natural['volcanic'].loc[1750.5:2023.5].values
+df_solar = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'solar_erf_timebounds.csv'), index_col=0)
+df_volcanic = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'volcanic_ERF_monthly_174701-201912.csv'), index_col=0)
 
 start = 1750
 end = 2023
@@ -41,17 +41,20 @@ n_hist = (end-start)//timestep+1
 
 solar_3yr = np.zeros(n_hist)
 volcanic_3yr = np.zeros(n_hist)
-solar_3yr[0] = solar_forcing[0]
-volcanic_3yr[0] = volcanic_forcing[0]
-for period in range(1, n_hist):
-    solar_3yr[period] = solar_forcing[(timestep*period-2):(timestep*period+1)].mean()
-    volcanic_3yr[period] = volcanic_forcing[(timestep*period-2):(timestep*period+1)].mean()
-
-## future solar forcing amplitude to be zero from 2020
-#solar_3yr[54:] = 0
+solar_3yr[0] = df_solar.loc[1750, 'erf']
+volcanic_3yr[0] = df_volcanic.loc[(start-3):(start-1/24), 'erf'].mean()
+for period in range(1, n_hist-1):
+    solar_3yr[period] = df_solar.loc[(start+timestep*period-2):(start+timestep*period), 'erf'].mean()
+    volcanic_3yr[period] = df_volcanic.loc[(start+timestep*period-3):(start+timestep*period-1/24), 'erf'].mean()
+solar_3yr[n_hist-1] = df_solar.loc[2020:2022, 'erf'].mean()
+volcanic_3yr[n_hist-1] = volcanic_3yr[n_hist-2] * 0.7
 
 species, properties = read_properties()
-df_configs =pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
+calibration_file = pooch.retrieve(
+    "https://zenodo.org/record/7545157/files/calibrated_constrained_parameters.csv",
+    known_hash="md5:43cdb8142141214c342fc655b5239eed"
+)
+df_configs = pd.read_csv(calibration_file, index_col=0)
 configs = np.array(list(df_configs.index))
 
 trend_shape = np.ones(n_hist)
@@ -101,26 +104,26 @@ fill(f.climate_configs['sigma_eta'], df_configs.loc[configs, 'sigma_eta'].values
 fill(f.climate_configs['sigma_xi'], df_configs.loc[configs, 'sigma_xi'].values.squeeze())
 fill(f.climate_configs['stochastic_run'], False)
 fill(f.climate_configs['use_seed'], False)
-fill(f.climate_configs['forcing_4co2'], 2 * erf_2co2 * (1 + 0.561*(calibrated_f4co2_mean - df_configs.loc[configs,'F_4xCO2'])/calibrated_f4co2_mean))
+fill(f.climate_configs['forcing_4co2'], df_configs.loc[configs, "F_4xCO2"].values.squeeze())
 
 # species level
 f.fill_species_configs()
 
 # carbon cycle
-# TODO: new batch of configs for GCP. For now, modify r0
-fill(f.species_configs['iirf_0'], df_configs.loc[configs, 'r0'].values.squeeze()-1.5, specie='CO2')
+# TODO: new batch of configs for GCP
+fill(f.species_configs['iirf_0'], df_configs.loc[configs, 'r0'].values.squeeze(), specie='CO2')
 fill(f.species_configs['iirf_airborne'], df_configs.loc[configs, 'rA'].values.squeeze(), specie='CO2')
 fill(f.species_configs['iirf_uptake'], df_configs.loc[configs, 'rU'].values.squeeze(), specie='CO2')
 fill(f.species_configs['iirf_temperature'], df_configs.loc[configs, 'rT'].values.squeeze(), specie='CO2')
 
 # aerosol indirect
 fill(f.species_configs['aci_scale'], df_configs.loc[configs, 'beta'].values.squeeze())
-fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape_so2'].values.squeeze(), specie='Sulfur')
-fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape_bc'].values.squeeze(), specie='BC')
-fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape_oc'].values.squeeze(), specie='OC')
+fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape Sulfur'].values.squeeze(), specie='Sulfur')
+fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape BC'].values.squeeze(), specie='BC')
+fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape OC'].values.squeeze(), specie='OC')
 
 # methane lifetime baseline
-fill(f.species_configs['unperturbed_lifetime'], 10.4198121, specie='CH4')
+fill(f.species_configs['unperturbed_lifetime'], 10.11702748, specie='CH4')
 
 # emissions adjustments for N2O and CH4 (we don't want to make these defaults as people might wanna run pulse expts with these gases)
 fill(f.species_configs['baseline_emissions'], 19.019783117809567, specie='CH4')
@@ -131,7 +134,7 @@ for specie in ['BC', 'CH4', 'N2O', 'NH3', 'NOx', 'OC', 'Sulfur', 'VOC', 'Equival
     fill(f.species_configs['erfari_radiative_efficiency'], df_configs.loc[configs, f"ari {specie}"], specie=specie)
 
 # forcing
-for specie in ['CH4', 'N2O', 'Stratospheric water vapour', 'Contrails', 'Light absorbing particles on snow and ice', 'Land use']:
+for specie in ['CO2', 'CH4', 'N2O', 'Stratospheric water vapour', 'Contrails', 'Light absorbing particles on snow and ice', 'Land use']:
     fill(f.species_configs['forcing_scale'], df_configs.loc[configs, f"scale {specie}"].values.squeeze(), specie=specie)
 for specie in ['CFC-11', 'CFC-12', 'CFC-113', 'CFC-114', 'CFC-115', 'HCFC-22', 'HCFC-141b', 'HCFC-142b',
     'CCl4', 'CHCl3', 'CH2Cl2', 'CH3Cl', 'CH3CCl3', 'CH3Br', 'Halon-1211', 'Halon-1301', 'Halon-2402',
@@ -139,7 +142,6 @@ for specie in ['CFC-11', 'CFC-12', 'CFC-113', 'CFC-114', 'CFC-115', 'HCFC-22', '
     'HFC-125', 'HFC-134a', 'HFC-143a', 'HFC-152a', 'HFC-227ea', 'HFC-23', 'HFC-236fa', 'HFC-245fa', 'HFC-32',
     'HFC-365mfc', 'HFC-4310mee']:
     fill(f.species_configs['forcing_scale'], df_configs.loc[configs, 'scale minorGHG'].values.squeeze(), specie=specie)
-fill(f.species_configs['forcing_scale'], 1 + 0.561*(calibrated_f4co2_mean - df_configs.loc[configs,'F_4xCO2'].values)/calibrated_f4co2_mean, specie='CO2')
 
 # ozone
 for specie in ['CH4', 'N2O', 'CO', 'NOx', 'VOC', 'Equivalent effective stratospheric chlorine']:
@@ -161,6 +163,14 @@ initialise(f.airborne_emissions, 0)
 
 f.run()
 
+weights_18501900 = np.ones(18)
+weights_18501900[0] = 1/2
+weights_18501900[-1] = 1/6
+
+weights_19952014 = np.ones(9)
+weights_19952014[0] = 1/6
+weights_19952014[-1] = 1/6
+
 for i, scenario in enumerate(scenarios):
     df_cc = pd.DataFrame(f.gas_partitions.loc[dict(scenario=scenario, specie='CO2')] * 12.011 / 44.009, columns=['geological', 'slow', 'mid', 'fast'], index=configs)
     df_co2 = pd.DataFrame(f.concentration.loc[dict(scenario=scenario, specie='CO2', timebounds=2023)], columns=['co2_2023'], index=configs)
@@ -176,6 +186,13 @@ for i, scenario in enumerate(scenarios):
     df = pd.DataFrame((np.nansum(f.forcing[-1, i, :, :], axis=-1) - f.forcing[-1, i, :, 2] - f.forcing[-3, i, :, 54:56].mean(axis=-1)), index=configs)
     df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'anthropogenic_non-co2_forcing_{scenario}.csv'))
 
-    # use surface layer 1850-1900 offset; apply same offset to all layers to preserve differences between layers that drives diffusion
-    df = pd.DataFrame(f.temperature[-1, i, :, :]-f.temperature[33:51, i, :, 0].mean(axis=0), index=configs, columns=['mixed_layer', 'mid_ocean', 'deep_ocean'])
-    df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'temperature_{scenario}.csv'))
+#    # use surface layer 1850-1900 offset; apply same offset to all layers to preserve differences between layers that drives diffusion
+    # use surface layer 1995-2014 offset; apply same offset to all layers to preserve differences between layers that drives diffusion
+#    df = pd.DataFrame(f.temperature[-1, i, :, :]-np.average(f.temperature[33:51, i, :, 0:1], weights=weights_18501900, axis=0), index=configs, columns=['mixed_layer', 'mid_ocean', 'deep_ocean'])
+    df = pd.DataFrame(0.85+f.temperature[-1, i, :, :]-np.average(f.temperature[81:90, i, :, 0:1], weights=weights_19952014, axis=0), index=configs, columns=['mixed_layer', 'mid_ocean', 'deep_ocean'])
+    df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'temperature_2023_{scenario}.csv'))
+
+    # save temperature time series
+#    df = pd.DataFrame((f.temperature[33:, i, :, 0]-np.average(f.temperature[33:51, i, :, 0], weights=weights_18501900, axis=0)).T, index=configs, columns=np.arange(1849, 2026, 3))
+    df = pd.DataFrame(0.85+(f.temperature[33:, i, :, 0]-np.average(f.temperature[81:90, i, :, 0], weights=weights_19952014, axis=0)).T, index=configs, columns=np.arange(1849, 2026, 3))
+    df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'temperature_historical_{scenario}.csv'))

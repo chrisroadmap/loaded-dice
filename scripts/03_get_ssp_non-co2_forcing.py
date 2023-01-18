@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import pandas as pd
+import pooch
 import matplotlib.pyplot as pl
 from tqdm import tqdm
 from scipy.interpolate import interp1d
@@ -53,8 +54,11 @@ for period in range(1, n_hist):
 # future solar forcing amplitude to be zero from 2023 - volcanic is zero by construction
 
 species, properties = read_properties()
-df_configs =pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
-configs = np.array(list(df_configs.index))
+calibration_file = pooch.retrieve(
+    "https://zenodo.org/record/7545157/files/calibrated_constrained_parameters.csv",
+    known_hash="md5:43cdb8142141214c342fc655b5239eed"
+)
+df_configs = pd.read_csv(calibration_file, index_col=0)configs = np.array(list(df_configs.index))
 
 trend_shape = np.ones(n_tot)
 trend_shape[:n_hist] = np.linspace(0, 1, n_hist)

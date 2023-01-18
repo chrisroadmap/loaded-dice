@@ -15,6 +15,6 @@ dependencies:
   - statsmodels
   - pip
   - pip:
-    - -e ../fair2.1-calibrate
+    - fair==2.1.0
     - aneris-iamc[units]
 
