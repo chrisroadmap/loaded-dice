@@ -6,11 +6,27 @@ import pooch
 import matplotlib.pyplot as pl
 from tqdm import tqdm
 from scipy.interpolate import interp1d
+import xarray as xr
 
 from fair import FAIR
 from fair.io import read_properties
 from fair.interface import fill, initialise
 from fair.forcing.ghg import meinshausen2020
+
+pl.rcParams['figure.figsize'] = (18/2.54, 6/2.54)
+pl.rcParams['font.size'] = 9
+pl.rcParams['font.family'] = 'Arial'
+pl.rcParams['ytick.direction'] = 'in'
+pl.rcParams['ytick.minor.visible'] = True
+pl.rcParams['ytick.major.right'] = True
+pl.rcParams['ytick.right'] = True
+pl.rcParams['xtick.direction'] = 'in'
+pl.rcParams['xtick.minor.visible'] = True
+pl.rcParams['xtick.major.top'] = True
+pl.rcParams['xtick.top'] = True
+pl.rcParams['axes.spines.top'] = True
+pl.rcParams['axes.spines.bottom'] = True
+pl.rcParams['figure.dpi'] = 150
 
 here = os.path.dirname(os.path.realpath(__file__))
 os.makedirs(os.path.join(here, '..', 'data_output', 'climate_configs'), exist_ok=True)
@@ -38,6 +54,7 @@ start = 1750
 end_hist = 2023
 end = 2500
 timestep = 3
+n_configs = 1001
 
 n_hist = (end_hist-start)//timestep+1
 n_fut = (end-end_hist)//timestep+1
@@ -54,11 +71,9 @@ for period in range(1, n_hist):
 # future solar forcing amplitude to be zero from 2023 - volcanic is zero by construction
 
 species, properties = read_properties()
-calibration_file = pooch.retrieve(
-    "https://zenodo.org/record/7545157/files/calibrated_constrained_parameters.csv",
-    known_hash="md5:43cdb8142141214c342fc655b5239eed"
-)
-df_configs = pd.read_csv(calibration_file, index_col=0)configs = np.array(list(df_configs.index))
+
+df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'calibrated_constrained_parameters.csv'), index_col=0)
+configs = np.array(list(df_configs.index))
 
 trend_shape = np.ones(n_tot)
 trend_shape[:n_hist] = np.linspace(0, 1, n_hist)
@@ -70,7 +85,17 @@ f.define_configs(configs)
 f.define_species(species, properties)
 f.allocate()
 
-f.fill_from_rcmip()
+da_emissions = xr.load_dataarray(
+    os.path.join(
+        here, '..', 'data_input', 'fair-2.1.0', 'ssp_gcp_harmonized_emissions_1750-2500.nc'
+    )
+)
+
+da = da_emissions.loc[dict(config="unspecified", scenario=scenarios)]
+fe = da.expand_dims(dim=["config"], axis=(2))
+emissions_annual = fe.drop("config") * np.ones((1, 1, n_configs, 1))
+for itime in range(250):
+    f.emissions[itime, ...] = emissions_annual[itime*3:itime*3+3, ...].mean(axis=0)
 
 # Until we harmonize the non-CO2 emissions separately, we don't need to override the
 # RCMIP emissions going in here.
@@ -94,7 +119,7 @@ fill(f.climate_configs['sigma_eta'], df_configs.loc[configs, 'sigma_eta'].values
 fill(f.climate_configs['sigma_xi'], df_configs.loc[configs, 'sigma_xi'].values.squeeze())
 fill(f.climate_configs['stochastic_run'], False)
 fill(f.climate_configs['use_seed'], False)
-fill(f.climate_configs['forcing_4co2'], 2 * erf_2co2 * (1 + 0.561*(calibrated_f4co2_mean - df_configs.loc[configs,'F_4xCO2'])/calibrated_f4co2_mean))
+fill(f.climate_configs['forcing_4co2'], df_configs.loc[configs, "F_4xCO2"].values.squeeze())
 
 # species level
 f.fill_species_configs()
@@ -107,12 +132,12 @@ fill(f.species_configs['iirf_temperature'], df_configs.loc[configs, 'rT'].values
 
 # aerosol indirect
 fill(f.species_configs['aci_scale'], df_configs.loc[configs, 'beta'].values.squeeze())
-fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape_so2'].values.squeeze(), specie='Sulfur')
-fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape_bc'].values.squeeze(), specie='BC')
-fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape_oc'].values.squeeze(), specie='OC')
+fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape Sulfur'].values.squeeze(), specie='Sulfur')
+fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape BC'].values.squeeze(), specie='BC')
+fill(f.species_configs['aci_shape'], df_configs.loc[configs, 'shape OC'].values.squeeze(), specie='OC')
 
 # methane lifetime baseline
-fill(f.species_configs['unperturbed_lifetime'], 10.4198121, specie='CH4')
+fill(f.species_configs['unperturbed_lifetime'], 10.11702748, specie='CH4')
 
 # emissions adjustments for N2O and CH4 (we don't want to make these defaults as people might wanna run pulse expts with these gases)
 fill(f.species_configs['baseline_emissions'], 19.019783117809567, specie='CH4')
@@ -123,7 +148,7 @@ for specie in ['BC', 'CH4', 'N2O', 'NH3', 'NOx', 'OC', 'Sulfur', 'VOC', 'Equival
     fill(f.species_configs['erfari_radiative_efficiency'], df_configs.loc[configs, f"ari {specie}"], specie=specie)
 
 # forcing
-for specie in ['CH4', 'N2O', 'Stratospheric water vapour', 'Contrails', 'Light absorbing particles on snow and ice', 'Land use']:
+for specie in ['CO2', 'CH4', 'N2O', 'Stratospheric water vapour', 'Contrails', 'Light absorbing particles on snow and ice', 'Land use']:
     fill(f.species_configs['forcing_scale'], df_configs.loc[configs, f"scale {specie}"].values.squeeze(), specie=specie)
 for specie in ['CFC-11', 'CFC-12', 'CFC-113', 'CFC-114', 'CFC-115', 'HCFC-22', 'HCFC-141b', 'HCFC-142b',
     'CCl4', 'CHCl3', 'CH2Cl2', 'CH3Cl', 'CH3CCl3', 'CH3Br', 'Halon-1211', 'Halon-1301', 'Halon-2402',
@@ -131,7 +156,6 @@ for specie in ['CFC-11', 'CFC-12', 'CFC-113', 'CFC-114', 'CFC-115', 'HCFC-22', '
     'HFC-125', 'HFC-134a', 'HFC-143a', 'HFC-152a', 'HFC-227ea', 'HFC-23', 'HFC-236fa', 'HFC-245fa', 'HFC-32',
     'HFC-365mfc', 'HFC-4310mee']:
     fill(f.species_configs['forcing_scale'], df_configs.loc[configs, 'scale minorGHG'].values.squeeze(), specie=specie)
-fill(f.species_configs['forcing_scale'], 1 + 0.561*(calibrated_f4co2_mean - df_configs.loc[configs,'F_4xCO2'].values)/calibrated_f4co2_mean, specie='CO2')
 
 # ozone
 for specie in ['CH4', 'N2O', 'CO', 'NOx', 'VOC', 'Equivalent effective stratospheric chlorine']:
@@ -153,42 +177,56 @@ initialise(f.airborne_emissions, 0)
 
 f.run()
 
-fig, ax = pl.subplots(1, 4, figsize=(16, 5))
+weights_19952014 = np.ones(9)
+weights_19952014[0] = 1/6
+weights_19952014[-1] = 1/6
+
+fig, ax = pl.subplots(1, 4)
 
 for i in range(4):
     ax[i].fill_between(
         f.timebounds,
-        np.min(f.temperature[:, i, :, 0]-f.temperature[33:51, i, :, 0].mean(axis=0), axis=1),
-        np.max(f.temperature[:, i, :, 0]-f.temperature[33:51, i, :, 0].mean(axis=0), axis=1),
-        color='#000000',
-        alpha=0.2,
+        0.85+np.min(f.temperature[:, i, :, 0]-np.average(f.temperature[81:90, i, :, 0], weights=weights_19952014, axis=0), axis=1),
+        0.85+np.max(f.temperature[:, i, :, 0]-np.average(f.temperature[81:90, i, :, 0], weights=weights_19952014, axis=0), axis=1),
+        color='#cccccc',
+        label='Full range',
+        lw=0
     )
     ax[i].fill_between(
         f.timebounds,
-        np.percentile(f.temperature[:, i, :, 0]-f.temperature[33:51, i, :, 0].mean(axis=0), 5, axis=1),
-        np.percentile(f.temperature[:, i, :, 0]-f.temperature[33:51, i, :, 0].mean(axis=0), 95, axis=1),
-        color='#000000',
-        alpha=0.2,
+        0.85+np.percentile(f.temperature[:, i, :, 0]-np.average(f.temperature[81:90, i, :, 0], weights=weights_19952014, axis=0), 5, axis=1),
+        0.85+np.percentile(f.temperature[:, i, :, 0]-np.average(f.temperature[81:90, i, :, 0], weights=weights_19952014, axis=0), 95, axis=1),
+        color='#999999',
+        label='90% range',
+        lw=0
     )
     ax[i].fill_between(
         f.timebounds,
-        np.percentile(f.temperature[:, i, :, 0]-f.temperature[33:51, i, :, 0].mean(axis=0), 16, axis=1),
-        np.percentile(f.temperature[:, i, :, 0]-f.temperature[33:51, i, :, 0].mean(axis=0), 84, axis=1),
-        color='#000000',
-        alpha=0.2,
+        0.85+np.percentile(f.temperature[:, i, :, 0]-np.average(f.temperature[81:90, i, :, 0], weights=weights_19952014, axis=0), 16, axis=1),
+        0.85+np.percentile(f.temperature[:, i, :, 0]-np.average(f.temperature[81:90, i, :, 0], weights=weights_19952014, axis=0), 84, axis=1),
+        color='#666666',
+        label='68% range',
+        lw=0
     )
     ax[i].plot(
         f.timebounds,
-        np.median(f.temperature[:, i, :, 0]-f.temperature[33:51, i, :, 0].mean(axis=0), axis=1),
+        0.85+np.median(f.temperature[:, i, :, 0]-np.average(f.temperature[81:90, i, :, 0], weights=weights_19952014, axis=0), axis=1),
         color='#000000',
+        label='median',
+        lw=1
     )
-    ax[i].set_xlim(1750,2500)
-    ax[i].set_ylim(-1, 10)
+    ax[i].set_xlim(2000,2500)
+    ax[i].set_ylim(0, 10)
     ax[i].axhline(0, color='k', ls=":", lw=0.5)
     ax[i].axhline(1.5, color='k', ls=":", lw=0.5)
     ax[i].axhline(2, color='k', ls=":", lw=0.5)
     ax[i].set_title(scenarios[i])
-pl.suptitle('Temperature anomaly')
+    if i==0:
+        ax[0].legend(loc='upper left')
+ax[0].set_ylabel("°C relative to 1850-1900")
+fig.tight_layout()
+pl.savefig(os.path.join(here, '..', 'figures', 'temperature_projections.png'))
+pl.savefig(os.path.join(here, '..', 'figures', 'temperature_projections.pdf'))
 pl.show()
 
 for i, scenario in enumerate(scenarios):

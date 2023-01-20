@@ -50,11 +50,7 @@ solar_3yr[n_hist-1] = df_solar.loc[2020:2022, 'erf'].mean()
 volcanic_3yr[n_hist-1] = volcanic_3yr[n_hist-2] * 0.7
 
 species, properties = read_properties()
-calibration_file = pooch.retrieve(
-    "https://zenodo.org/record/7545157/files/calibrated_constrained_parameters.csv",
-    known_hash="md5:43cdb8142141214c342fc655b5239eed"
-)
-df_configs = pd.read_csv(calibration_file, index_col=0)
+df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'calibrated_constrained_parameters.csv'), index_col=0)
 configs = np.array(list(df_configs.index))
 
 trend_shape = np.ones(n_hist)

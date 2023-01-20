@@ -5,6 +5,23 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
 
+# Plot a few damage functions from literature
+
+pl.rcParams['figure.figsize'] = (9/2.54, 9/2.54)
+pl.rcParams['font.size'] = 9
+pl.rcParams['font.family'] = 'Arial'
+pl.rcParams['ytick.direction'] = 'in'
+pl.rcParams['ytick.minor.visible'] = True
+pl.rcParams['ytick.major.right'] = True
+pl.rcParams['ytick.right'] = True
+pl.rcParams['xtick.direction'] = 'in'
+pl.rcParams['xtick.minor.visible'] = True
+pl.rcParams['xtick.major.top'] = True
+pl.rcParams['xtick.top'] = True
+pl.rcParams['axes.spines.top'] = True
+pl.rcParams['axes.spines.bottom'] = True
+pl.rcParams['figure.dpi'] = 150
+
 # Callahan and Mankin 2022 Sci Adv.:
 # Cumulative 1992–2013 losses from anthropogenic extreme heat likely fall between
 # $5 trillion and $29.3 trillion globally
@@ -47,8 +64,10 @@ pl.plot(trange, weitzman2012_ds2015(trange), label='Weitzman 2012 per Dietz & St
 pl.plot(trange, fit_burke_logistic(trange, *p), label='Burke emulation')
 pl.plot(temp, damfrac, label='Burke')
 pl.plot(trange, dice2016(trange, a2=0.01145), label='Howard and Sterner (2017) max.')
+pl.xlabel('°C above pre-industrial')
+pl.ylabel('Damage fraction of GDP (0 to 1)')
 
-pl.legend()
+pl.legend(fontsize=8, frameon=False)
 pl.ylim(0, 1)
 pl.xlim(0, 7)
 

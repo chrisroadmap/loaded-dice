@@ -11,7 +11,7 @@ import scipy.stats as st
 from scipy.signal import savgol_filter
 #import scipy.optimize as op
 
-pl.rcParams['figure.figsize'] = (12/2.54, 12/2.54)
+pl.rcParams['figure.figsize'] = (9/2.54, 9/2.54)
 pl.rcParams['font.size'] = 9
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'
@@ -61,10 +61,10 @@ for year in range(2020, 2101, 10):
     x = np.append(x, np.column_stack([ffi, period, period2]), axis=0)
     if year>2020:
         sl, ic, _, _, _ = st.linregress(ffi, so2)
-        pl.scatter(ffi, so2)
+        pl.scatter(ffi, so2, alpha=0.3)
         pl.plot(np.linspace(-20, 120), np.linspace(-20, 120) * sl + ic, label=year)
 
-pl.title('AR6 IAM scenarios, harmonised & passed vetting')
+pl.title('AR6 WG3 IAM Scenarios (n=1202)')
 pl.xlabel('FFI emissions, GtCO$_2$ yr$^{-1}$')
 pl.ylabel('SO$_2$ emissions, MtSO$_2$ yr$^{-1}$')
 pl.legend()

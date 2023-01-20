@@ -9,9 +9,10 @@ import pandas as pd
 from statsmodels.formula.api import ols
 import scipy.stats as st
 from scipy.signal import savgol_filter
+from matplotlib.lines import Line2D
 #import scipy.optimize as op
 
-pl.rcParams['figure.figsize'] = (12/2.54, 12/2.54)
+pl.rcParams['figure.figsize'] = (18/2.54, 9/2.54)
 pl.rcParams['font.size'] = 9
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'
@@ -156,38 +157,41 @@ non_co2_smoothed_95 = savgol_filter(
 #    mode='nearest'
 )
 
-pl.plot(
+fig, ax = pl.subplots(1, 2)
+
+ax[0].plot(
     np.arange(2014, 2101),
     non_co2_smoothed_05[14:, :],
     color='b',
     alpha=0.1
 )
-pl.plot(
+ax[0].plot(
     np.arange(2014, 2101),
     non_co2_smoothed_50[14:, :],
     color='k',
     alpha=0.1
 )
-pl.plot(
+ax[0].plot(
     np.arange(2014, 2101),
     non_co2_smoothed_95[14:, :],
     color='r',
-    alpha=0.1
+    alpha=0.1,
 )
 
-pl.title('AR6 IAM scenarios, harmonised & passed vetting')
-pl.ylabel('Non-CO$_2$ forcing, W m$^{-2}$')
-pl.xlim(2014, 2100)
-pl.tight_layout()
-pl.savefig(os.path.join(here, '..', 'figures', 'ar6_non-co2.png'))
-pl.savefig(os.path.join(here, '..', 'figures', 'ar6_non-co2.pdf'))
-pl.show()
+custom_lines = [Line2D([0], [0], color='r'),
+                Line2D([0], [0], color='k'),
+                Line2D([0], [0], color='b')]
+ax[0].legend(custom_lines, ['95th percentile', 'Median', '5th percentile'])
+
+ax[0].set_title('Non-CO$_2$ forcing')
+ax[0].set_ylabel('W m$^{-2}$')
+ax[0].set_xlim(2014, 2100)
 
 for year in range(2020, 2101, 10):
     nonco2_05 = non_co2_smoothed_05[year-2000, :]
     nonco2_50 = non_co2_smoothed_50[year-2000, :]
     nonco2_95 = non_co2_smoothed_95[year-2000, :]
-    ffi       = ar6_50_edit.loc[(ar6_50_edit['variable']=='Emissions|CO2|Energy and Industrial Processes'), str(year)].values/1000
+    ffi       = ar6_50_edit.loc[(ar6_50_edit['variable']=='Emissions|CO2|Energy and Industrial Processes'), str(year)].values
     period    = ((year-2023)/3 + 1) * np.ones_like(ffi)
     fives     = np.ones_like(ffi) * 5
     fiftys    = np.ones_like(ffi) * 50
@@ -203,21 +207,21 @@ for year in range(2020, 2101, 10):
         sl50, ic50, _, _, _ = st.linregress(ffi, nonco2_50)
         sl95, ic95, _, _, _ = st.linregress(ffi, nonco2_95)
         shade = (2120-year)/100
-        pl.scatter(ffi, nonco2_05, color=(0, 0, shade))
-        pl.scatter(ffi, nonco2_50, color=(shade, shade, shade))
-        pl.scatter(ffi, nonco2_95, color=(shade, 0, 0))
+        ax[1].scatter(ffi, nonco2_05, color=(0, 0, shade), alpha=0.3)
+        ax[1].scatter(ffi, nonco2_50, color=(shade, shade, shade), alpha=0.3)
+        ax[1].scatter(ffi, nonco2_95, color=(shade, 0, 0), alpha=0.3)
         print(year, sl05, sl50, sl95, ic05, ic50, ic95)
-        pl.plot(np.linspace(-20, 120), np.linspace(-20, 120) * sl05 + ic05, color=(0, 0, shade))
-        pl.plot(np.linspace(-20, 120), np.linspace(-20, 120) * sl50 + ic50, color=(shade, shade, shade), label=year)
-        pl.plot(np.linspace(-20, 120), np.linspace(-20, 120) * sl95 + ic95, color=(shade, 0, 0))
+        ax[1].plot(np.linspace(-20, 130), np.linspace(-20, 130) * sl05 + ic05, color=(0, 0, shade))
+        ax[1].plot(np.linspace(-20, 130), np.linspace(-20, 130) * sl50 + ic50, color=(shade, shade, shade), label=year)
+        ax[1].plot(np.linspace(-20, 130), np.linspace(-20, 130) * sl95 + ic95, color=(shade, 0, 0))
 
-pl.title('AR6 IAM scenarios, harmonised & passed vetting')
-pl.xlabel('FFI emissions, GtCO$_2$ yr$^{-1}$')
-pl.ylabel('Non-CO$_2$ forcing, W m$^{-2}$')
-pl.legend()
-pl.tight_layout()
-pl.savefig(os.path.join(here, '..', 'figures', 'co2_ffi_non-co2.png'))
-pl.savefig(os.path.join(here, '..', 'figures', 'co2_ffi_non-co2.pdf'))
+ax[1].set_title('CO$_2$ fossil emissions and non-CO$_2$ forcing')
+ax[1].set_xlabel('CO$_2$ fossil emissions, GtCO$_2$ yr$^{-1}$')
+ax[1].set_ylabel('Non-CO$_2$ forcing, W m$^{-2}$')
+ax[1].legend(loc='upper left', ncol=2, fontsize=8)
+fig.tight_layout()
+pl.savefig(os.path.join(here, '..', 'figures', 'ar6_non-co2.png'))
+pl.savefig(os.path.join(here, '..', 'figures', 'ar6_non-co2.pdf'))
 pl.show()
 
 sm_df = pd.DataFrame(x, columns=['ffi', 'period', 'quantile'])

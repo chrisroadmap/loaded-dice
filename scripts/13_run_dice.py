@@ -18,7 +18,7 @@ class InfeasibleSolutionError(Exception):
 
 here = os.path.dirname(os.path.realpath(__file__))
 
-df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
+df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'calibrated_constrained_parameters.csv'), index_col=0)
 configs = df_configs.index
 
 os.makedirs(os.path.join(here, 'gams_scripts'), exist_ok=True)
@@ -28,7 +28,7 @@ df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs
 df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'gas_partitions_ssp245.csv'), index_col=0)
 df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'climate_response_params.csv'), index_col=0)
 df_co2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'co2_forcing_ssp245.csv'), index_col=0)
-df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_ssp245.csv'), index_col=0)
+df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_2023_ssp245.csv'), index_col=0)
 df_afolu = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'afolu_regression.csv'), index_col=0)
 df_nonco2_reg = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'nonco2_regression.csv'), index_col=0)
 #
@@ -226,7 +226,7 @@ PARAMETERS
                  151 {nonco2[150]}, 152 {nonco2[151]}, 153 {nonco2[152]}, 154 {nonco2[153]}, 155 {nonco2[154]},
                  156 {nonco2[155]}, 157 {nonco2[156]}, 158 {nonco2[157]}, 159 {nonco2[158]}, 160 {nonco2[159]}/
 ** Climate damage parameters:
-        a2       Quadratic multiplier (Howard & Sterner 2017 base)     /0.00236/
+        a2       Quadratic multiplier (DICE 2016)                      /0.00236/
 ** Abatement cost
         expcost2  Exponent of control cost function                    /2.6/
         pback     Cost of backstop 2020$ per tCO2 2023                 /679/

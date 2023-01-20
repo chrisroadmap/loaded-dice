@@ -1,11 +1,13 @@
 import os
 from tqdm import tqdm
+import pathlib
 
 import numpy as np
 import pooch
 import pyarrow.feather as feather
 import pandas as pd
 import py7zr
+import shutil
 
 here = os.path.dirname(os.path.realpath(__file__))
 
@@ -15,9 +17,11 @@ zipfile = pooch.retrieve(
     progressbar=True,
 )
 
-# with py7zr.SevenZipFile(zipfile, mode='r') as z:
-#     extract_files = [file for file in z.getnames() if 'pop_income/' in file]
-#     z.extract(path=os.path.join(here, '..', 'data_input', 'rff_population_gdp'), targets=extract_files)
+target = pathlib.Path(os.path.join(here, '..', 'data_input', 'rff_population_gdp')).resolve()
+
+with py7zr.SevenZipFile(zipfile, mode='r') as z:
+    extract_files = [file for file in z.getnames() if 'pop_income/' in file]
+    z.extract(path=target, targets=extract_files)
 
 data = np.ones((57, 10000)) * np.nan
 for run in tqdm(range(1, 10001)):
@@ -27,3 +31,5 @@ for run in tqdm(range(1, 10001)):
 
 df_out = pd.DataFrame(data.T, columns=range(2020, 2305, 5), index=range(1, 10001))
 df_out.to_csv(os.path.join(here, '..', 'data_input', 'rff_population_gdp', 'population.csv'))
+
+shutil.rmtree(os.path.join(here, '..', 'data_input', 'rff_population_gdp', 'pop_income'))

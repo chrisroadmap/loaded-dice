@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 import pandas as pd
-import pooch
 from tqdm import tqdm
 import scipy.linalg
 
@@ -13,15 +12,10 @@ from fair.energy_balance_model import EnergyBalanceModel
 # C-cycle spin-ups.
 
 # get the AR6 calibration of FaIR v2.1
-calibration_file = pooch.retrieve(
-    "https://zenodo.org/record/7545157/files/calibrated_constrained_parameters.csv",
-    known_hash="md5:43cdb8142141214c342fc655b5239eed"
-)
-
 here = os.path.dirname(os.path.realpath(__file__))
 os.makedirs(os.path.join(here, '..', 'data_output', 'climate_configs'), exist_ok=True)
 
-calibration = pd.read_csv(calibration_file, index_col=0)
+calibration = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'calibrated_constrained_parameters.csv'), index_col=0)
 configs = calibration.index
 
 # required for running DICE

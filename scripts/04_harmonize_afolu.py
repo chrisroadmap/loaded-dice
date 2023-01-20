@@ -24,11 +24,27 @@ for year in yearfaff:
 history = scmdata.ScmRun(
     os.path.join(here, "..", "data_input", "global-carbon-project", "gcp_iamc_format.csv"), lowercase_cols=True
 ).filter(region='World', variable=variables).interpolate(target_times=times).timeseries(time_axis="year")
-
+# I don't like scmdata's default conversion, so hack
+#history["units"] = "Gt CO2/yr"
+history = history * 44.009/12.011
+arrays = []
+for idx in range(0, len(history.index)):
+    arrays.append(list(history.index[idx]))
+    arrays[-1][3] = "GtCO2/yr"
+new_index = pd.MultiIndex.from_tuples(list(zip(*list(map(list,zip(*arrays))))), names=history.index.names)
+history.index = new_index
 
 scenarios = scmdata.ScmRun(
     os.path.join(here, "..", "data_input", "wg3", "co2_ffi_afolu_price.csv"), lowercase_cols=True
 ).filter(region='World', variable=variables).timeseries(time_axis="year")
+scenarios = scenarios / 1000
+arrays = []
+for idx in range(0, len(scenarios.index)):
+    arrays.append(list(scenarios.index[idx]))
+    arrays[-1][3] = "GtCO2/yr"
+new_index = pd.MultiIndex.from_tuples(list(zip(*list(map(list,zip(*arrays))))), names=scenarios.index.names)
+scenarios.index = new_index
+
 
 overrides = pd.DataFrame(
     [
@@ -43,7 +59,7 @@ overrides = pd.DataFrame(
     ]
 )
 
-harmonisation_year = 2020
+harmonisation_year = 2010
 
 with warnings.catch_warnings():
     warnings.simplefilter('ignore')
