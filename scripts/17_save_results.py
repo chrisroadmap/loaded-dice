@@ -13,7 +13,7 @@ os.makedirs(os.path.join(here, '..', 'data_output', 'results'), exist_ok=True)
 
 ensemble_size=1001
 
-df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
+df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'calibrated_constrained_parameters.csv'), index_col=0)
 configs = df_configs.index
 
 pl.rcParams['figure.figsize'] = (12/2.54, 12/2.54)

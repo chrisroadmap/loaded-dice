@@ -8,45 +8,8 @@ import pandas as pd
 from fair.energy_balance_model import EnergyBalanceModel
 from fair.forcing.ghg import meinshausen2020
 
-here = os.path.dirname(os.path.realpath(__file__))
-
-os.makedirs(os.path.join(here, '..', 'figures'), exist_ok=True)
-
-ensemble_size=1001
-
-df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
-configs = df_configs.index
-
-ecs = np.zeros(1001)
-tcr = np.zeros(1001)
-
-erf_2co2 = meinshausen2020(
-    np.array([554.30, 731.41, 273.87]) * np.ones((1, 1, 1, 3)),
-    np.array([277.15, 731.41, 273.87]) * np.ones((1, 1, 1, 3)),
-    np.array((1.05, 0.86, 1.07)) * np.ones((1, 1, 1, 1)),
-    np.ones((1, 1, 1, 3)),
-    np.array([True, False, False]),
-    np.array([False, True, False]),
-    np.array([False, False, True]),
-    np.array([False, False, False])
-).squeeze()[0]
-calibrated_f4co2_mean = df_configs['F_4xCO2'].mean()
-
-for i, config in enumerate(configs):
-    ebm = EnergyBalanceModel(
-        ocean_heat_capacity = df_configs.loc[config, 'c1':'c3'],
-        ocean_heat_transfer = df_configs.loc[config, 'kappa1':'kappa3'],
-        deep_ocean_efficacy = df_configs.loc[config, 'epsilon'],
-        gamma_autocorrelation = df_configs.loc[config, 'gamma'],
-        forcing_4co2 = 2 * erf_2co2 * (1 + 0.561*(calibrated_f4co2_mean - df_configs.loc[config, 'F_4xCO2'])/calibrated_f4co2_mean),
-        timestep=5,
-        stochastic_run=False,
-    )
-    ebm.emergent_parameters()
-    ecs[i], tcr[i] = (ebm.ecs, ebm.tcr)
-
-pl.rcParams['figure.figsize'] = (40.1/2.54, 30/2.54)
-pl.rcParams['font.size'] = 16 #20
+pl.rcParams['figure.figsize'] = (18/2.54, 12/2.54)
+pl.rcParams['font.size'] = 9 #20
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'
 pl.rcParams['ytick.minor.visible'] = True
@@ -59,6 +22,31 @@ pl.rcParams['xtick.top'] = True
 pl.rcParams['axes.spines.top'] = True
 pl.rcParams['axes.spines.bottom'] = True
 pl.rcParams['figure.dpi'] = 150
+
+here = os.path.dirname(os.path.realpath(__file__))
+
+os.makedirs(os.path.join(here, '..', 'figures'), exist_ok=True)
+
+ensemble_size=1001
+
+df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'calibrated_constrained_parameters.csv'), index_col=0)
+configs = df_configs.index
+
+ecs = np.zeros(1001)
+tcr = np.zeros(1001)
+
+for i, config in enumerate(configs):
+    ebm = EnergyBalanceModel(
+        ocean_heat_capacity = df_configs.loc[config, 'c1':'c3'],
+        ocean_heat_transfer = df_configs.loc[config, 'kappa1':'kappa3'],
+        deep_ocean_efficacy = df_configs.loc[config, 'epsilon'],
+        gamma_autocorrelation = df_configs.loc[config, 'gamma'],
+        forcing_4co2 = df_configs.loc[config, 'F_4xCO2'],
+        timestep=3,
+        stochastic_run=False,
+    )
+    ebm.emergent_parameters()
+    ecs[i], tcr[i] = (ebm.ecs, ebm.tcr)
 
 yunit = {
     'CO2_FFI_emissions': 'GtCO$_2$ yr$^{-1}$',
@@ -171,7 +159,7 @@ for i, variable in enumerate(['CO2_FFI_emissions', 'CO2_concentration', 'tempera
     ax[i//2,i%2].set_xticks(np.arange(2025, 2130, 25))
     ax[i//2,i%2].axhline(0, ls=':', color='k')
     ax[i//2,i%2].axvline(2100, ls=':', color='k')
-ax[1,0].legend(fontsize=14, frameon=False)
+ax[1,0].legend(fontsize=8, frameon=False)
 fig.tight_layout()
 #pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections.png'))
 #pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections.pdf'))
@@ -192,7 +180,7 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
 ax[0,2].set_xscale('log')
 pl.rcParams['xtick.minor.visible'] = True
 ax[0,2].set_xlim(6, 10000)
-ax[0,2].set_title("(c) Social cost of carbon in 2023")
+ax[0,2].set_title("(c) SCC in 2023")
 ax[0,2].set_xlabel("(2020\$)")
 ax[0,2].set_ylabel("Density")
 ax[0,2].set_yticklabels([])
@@ -204,8 +192,8 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
 ax[1,2].set_yscale('log')
 ax[1,2].set_xlim(1, 7)
 ax[1,2].set_ylim(5, 10000)
-ax[1,2].set_title("(f) Equilibrium climate sensitivity")
-ax[1,2].set_ylabel("Social cost of carbon, 2020\$")
+ax[1,2].set_title("(f) ECS versus SCC")
+ax[1,2].set_ylabel("SCC in 2023, 2020\$")
 ax[1,2].set_xlabel("ECS, °C")
 ax[1,2].yaxis.set_major_formatter(ScalarFormatter())
 
@@ -214,6 +202,6 @@ ax[1,2].yaxis.set_major_formatter(ScalarFormatter())
 fig.tight_layout()
 #pl.savefig(os.path.join(here, '..', 'figures', f'scc_histogram.png'))
 #pl.savefig(os.path.join(here, '..', 'figures', f'scc_histogram.pdf'))
-pl.savefig(os.path.join(here, '..', 'figures', f'iamc_all.png'))
-pl.savefig(os.path.join(here, '..', 'figures', f'iamc_all.pdf'))
+pl.savefig(os.path.join(here, '..', 'figures', f'projections_scc_ecs.png'))
+pl.savefig(os.path.join(here, '..', 'figures', f'projections_scc_ecs.pdf'))
 pl.show()

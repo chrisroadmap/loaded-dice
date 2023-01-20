@@ -14,7 +14,7 @@ os.makedirs(os.path.join(here, '..', 'figures'), exist_ok=True)
 
 ensemble_size=1001
 
-df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
+df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'calibrated_constrained_parameters.csv'), index_col=0)
 configs = df_configs.index
 
 ecs = np.zeros(1001)
@@ -38,15 +38,15 @@ for i, config in enumerate(configs):
         ocean_heat_transfer = df_configs.loc[config, 'kappa1':'kappa3'],
         deep_ocean_efficacy = df_configs.loc[config, 'epsilon'],
         gamma_autocorrelation = df_configs.loc[config, 'gamma'],
-        forcing_4co2 = 2 * erf_2co2 * (1 + 0.561*(calibrated_f4co2_mean - df_configs.loc[config, 'F_4xCO2'])/calibrated_f4co2_mean),
-        timestep=5,
+        forcing_4co2 = df_configs.loc[config, 'F_4xCO2'],
+        timestep=3,
         stochastic_run=False,
     )
     ebm.emergent_parameters()
     ecs[i], tcr[i] = (ebm.ecs, ebm.tcr)
 
-pl.rcParams['figure.figsize'] = (20/2.54, 20/2.54)
-pl.rcParams['font.size'] = 20
+pl.rcParams['figure.figsize'] = (9/2.54, 9/2.54)
+pl.rcParams['font.size'] = 9 #20
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'
 pl.rcParams['ytick.minor.visible'] = True
