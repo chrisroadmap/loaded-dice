@@ -1,6 +1,5 @@
 import os
 
-import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
 
@@ -15,21 +14,6 @@ ensemble_size=1001
 
 df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'calibrated_constrained_parameters.csv'), index_col=0)
 configs = df_configs.index
-
-pl.rcParams['figure.figsize'] = (12/2.54, 12/2.54)
-pl.rcParams['font.size'] = 9
-pl.rcParams['font.family'] = 'Arial'
-pl.rcParams['ytick.direction'] = 'in'
-pl.rcParams['ytick.minor.visible'] = True
-pl.rcParams['ytick.major.right'] = True
-pl.rcParams['ytick.right'] = True
-pl.rcParams['xtick.direction'] = 'in'
-pl.rcParams['xtick.minor.visible'] = True
-pl.rcParams['xtick.major.top'] = True
-pl.rcParams['xtick.top'] = True
-pl.rcParams['axes.spines.top'] = True
-pl.rcParams['axes.spines.bottom'] = True
-pl.rcParams['figure.dpi'] = 150
 
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     dfs = []

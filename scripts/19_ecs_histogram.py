@@ -45,8 +45,8 @@ for i, config in enumerate(configs):
     ebm.emergent_parameters()
     ecs[i], tcr[i] = (ebm.ecs, ebm.tcr)
 
-pl.rcParams['figure.figsize'] = (9/2.54, 9/2.54)
-pl.rcParams['font.size'] = 9 #20
+pl.rcParams['figure.figsize'] = (8.7/2.54, 8.7/2.54)
+pl.rcParams['font.size'] = 7 #20
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'
 pl.rcParams['ytick.minor.visible'] = True
@@ -69,9 +69,9 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
         outputs[scenario][variable] = df[:].T.values[0, :]
 
 labels = {
-    'dice': "'Nordhaus optimal'",
-    'dice_below2deg': "Well-below 2°C",
-    'dice_1p5deglowOS': "1.5°C-low overshoot"
+    'dice': "'Optimal'",
+    'dice_below2deg': "2°C",
+    'dice_1p5deglowOS': "1.5°C"
 }
 
 colors = {
@@ -84,13 +84,13 @@ fig, ax = pl.subplots(1, 1)
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     ax.scatter(ecs, outputs[scenario]['social_cost_of_carbon'], alpha=0.3, label=labels[scenario], color=colors[scenario])
 pl.yscale('log')
-ax.set_xlim(1, 7)
-ax.set_ylim(5, 10000)
+ax.set_xlim(1, 8)
+ax.set_ylim(5, 12000)
 ax.set_title("Equilibrium climate sensitivity")
 ax.set_ylabel("Social cost of carbon, 2020\$")
 ax.set_xlabel("ECS, °C")
 ax.yaxis.set_major_formatter(ScalarFormatter())
-ax.legend(fontsize=14, frameon=False)
+ax.legend(frameon=True)
 fig.tight_layout()
 pl.savefig(os.path.join(here, '..', 'figures', f'ecs_scc.png'))
 pl.savefig(os.path.join(here, '..', 'figures', f'ecs_scc.pdf'))
@@ -100,13 +100,13 @@ fig, ax = pl.subplots(1, 1)
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     ax.scatter(tcr, outputs[scenario]['social_cost_of_carbon'], alpha=0.3, label=labels[scenario], color=colors[scenario])
 pl.yscale('log')
-ax.set_xlim(0.8, 3.2)
-ax.set_ylim(5, 10000)
+ax.set_xlim(0.8, 3.5)
+ax.set_ylim(5, 12000)
 ax.set_title("Transient climate response")
 ax.set_ylabel("Social cost of carbon, 2020\$")
 ax.set_xlabel("TCR, °C")
 ax.yaxis.set_major_formatter(ScalarFormatter())
-ax.legend(fontsize=14, frameon=False)
+ax.legend(frameon=True)
 fig.tight_layout()
 pl.savefig(os.path.join(here, '..', 'figures', f'tcr_scc.png'))
 pl.savefig(os.path.join(here, '..', 'figures', f'tcr_scc.pdf'))

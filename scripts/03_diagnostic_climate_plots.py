@@ -4,8 +4,8 @@ import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
 
-pl.rcParams['figure.figsize'] = (18/2.54, 9/2.54)
-pl.rcParams['font.size'] = 9
+pl.rcParams['figure.figsize'] = (17.4/2.54, 8.7/2.54)
+pl.rcParams['font.size'] = 7
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'
 pl.rcParams['ytick.minor.visible'] = True
