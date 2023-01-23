@@ -5,8 +5,8 @@ from matplotlib.ticker import StrMethodFormatter
 import numpy as np
 import pandas as pd
 
-pl.rcParams['figure.figsize'] = (9/2.54, 9/2.54)
-pl.rcParams['font.size'] = 9
+pl.rcParams['figure.figsize'] = (8.7/2.54, 8.7/2.54)
+pl.rcParams['font.size'] = 7
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'
 pl.rcParams['ytick.minor.visible'] = True
@@ -38,12 +38,14 @@ data_combined = np.concatenate((data, data_ext), axis=1)
 
 fig, ax = pl.subplots()
 
-ax.semilogy(np.arange(2020, 2520, 5), data_combined.T/1e6, zorder=-7)
+ax.semilogy(np.arange(2020, 2520, 5), data_combined.T/1e6, zorder=-7, lw=0.5)
+ax.semilogy(np.arange(2020, 2520, 5), np.median(data_combined.T/1e6, axis=1), zorder=-6, color='k', label='RFF-SP median extended')
 ax.set_ylabel('Population (billions)')
 ax.set_xlim(2020, 2515)
 ax.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
 ax.set_ylim(0.1, 300)
 ax.set_title('Population projections')
+ax.legend()
 
 
 fig.tight_layout()

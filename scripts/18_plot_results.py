@@ -8,8 +8,8 @@ import pandas as pd
 from fair.energy_balance_model import EnergyBalanceModel
 from fair.forcing.ghg import meinshausen2020
 
-pl.rcParams['figure.figsize'] = (18/2.54, 12/2.54)
-pl.rcParams['font.size'] = 9 #20
+pl.rcParams['figure.figsize'] = (17.8/2.54, 11.9/2.54)
+pl.rcParams['font.size'] = 7 #20
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'
 pl.rcParams['ytick.minor.visible'] = True
@@ -70,7 +70,7 @@ ylim = {
     'radiative_forcing': (0, 7)
 }
 labels = {
-    'dice': "DICE default",
+    'dice': 'DICE-2016R "optimal"',
     'dice_below2deg': "Well-below 2°C",
     'dice_1p5deglowOS': "1.5°C-low overshoot"
 }
@@ -88,12 +88,12 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
         df = pd.read_csv(os.path.join(here, '..', 'data_output', 'results', f'{scenario}__{variable}.csv'), index_col=0)
         outputs[scenario][variable] = df[:].T.values
 
-    print('emissions   2101', np.nanpercentile(outputs[scenario]['CO2_FFI_emissions'][27, :], (5, 50, 95)))  # CO2 fossil emissions 2100
-    print('emissions   2050', np.nanpercentile(outputs[scenario]['CO2_FFI_emissions'][10, :], (5, 50, 95)))  # CO2 fossil emissions 2100
+    print('emissions   2101', np.nanpercentile(outputs[scenario]['CO2_FFI_emissions'][26, :], (5, 50, 95)))  # CO2 fossil emissions 2100
+    print('emissions   2050', np.nanpercentile(outputs[scenario]['CO2_FFI_emissions'][9, :], (5, 50, 95)))  # CO2 fossil emissions 2100
     print('SCC         2023', np.nanpercentile(outputs[scenario]['social_cost_of_carbon'][0, :], (5, 50, 95))) # social cost of carbon 2020
-    print('temperature 2101', np.nanpercentile(outputs[scenario]['temperature'][27, :], (5, 50, 95)))  # temperature 2100
+    print('temperature 2101', np.nanpercentile(outputs[scenario]['temperature'][26, :], (5, 50, 95)))  # temperature 2100
     print('temperature peak', np.nanpercentile(np.max(outputs[scenario]['temperature'], axis=0), (5, 50, 95)))  # peak temperature
-    print('forcing     2101', np.nanpercentile(outputs[scenario]['radiative_forcing'][27, :], (5, 50, 95)))  # radiative forcing 2100
+    print('forcing     2101', np.nanpercentile(outputs[scenario]['radiative_forcing'][26, :], (5, 50, 95)))  # radiative forcing 2100
 
     # fig, ax = pl.subplots(2,2)
     # for i, variable in enumerate(['CO2_FFI_emissions', 'CO2_concentration', 'temperature', 'social_cost_of_carbon']):
@@ -159,7 +159,7 @@ for i, variable in enumerate(['CO2_FFI_emissions', 'CO2_concentration', 'tempera
     ax[i//2,i%2].set_xticks(np.arange(2025, 2130, 25))
     ax[i//2,i%2].axhline(0, ls=':', color='k')
     ax[i//2,i%2].axvline(2100, ls=':', color='k')
-ax[1,0].legend(fontsize=8, frameon=False)
+ax[0,1].legend(fontsize=6, frameon=False)
 fig.tight_layout()
 #pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections.png'))
 #pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections.pdf'))
@@ -180,7 +180,7 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
 ax[0,2].set_xscale('log')
 pl.rcParams['xtick.minor.visible'] = True
 ax[0,2].set_xlim(6, 10000)
-ax[0,2].set_title("(c) SCC in 2023")
+ax[0,2].set_title("(c) Social cost of carbon in 2023")
 ax[0,2].set_xlabel("(2020\$)")
 ax[0,2].set_ylabel("Density")
 ax[0,2].set_yticklabels([])
@@ -193,7 +193,7 @@ ax[1,2].set_yscale('log')
 ax[1,2].set_xlim(1, 7)
 ax[1,2].set_ylim(5, 10000)
 ax[1,2].set_title("(f) ECS versus SCC")
-ax[1,2].set_ylabel("SCC in 2023, 2020\$")
+ax[1,2].set_ylabel("Social cost of carbon in 2023, 2020\$")
 ax[1,2].set_xlabel("ECS, °C")
 ax[1,2].yaxis.set_major_formatter(ScalarFormatter())
 

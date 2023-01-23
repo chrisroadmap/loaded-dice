@@ -9,8 +9,8 @@ import pandas as pd
 import statsmodels.api as sm
 from scipy.stats import linregress
 
-pl.rcParams['figure.figsize'] = (9/2.54, 9/2.54)
-pl.rcParams['font.size'] = 9
+pl.rcParams['figure.figsize'] = (8.7/2.54, 8.7/2.54)
+pl.rcParams['font.size'] = 7
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'
 pl.rcParams['ytick.minor.visible'] = True

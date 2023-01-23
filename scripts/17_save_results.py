@@ -56,11 +56,11 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
         except:
             pass
 
-    print('emissions   2101', np.nanpercentile(outputs['CO2_FFI_emissions'][27, :], (5, 50, 95)))  # CO2 fossil emissions 2100
+    print('emissions   2101', np.nanpercentile(outputs['CO2_FFI_emissions'][26, :], (5, 50, 95)))  # CO2 fossil emissions 2100
     print('SCC         2023', np.nanpercentile(outputs['social_cost_of_carbon'][0, :], (5, 50, 95))) # social cost of carbon 2020
-    print('temperature 2101', np.nanpercentile(outputs['temperature'][27, :], (5, 50, 95)))  # temperature 2100
+    print('temperature 2101', np.nanpercentile(outputs['temperature'][26, :], (5, 50, 95)))  # temperature 2100
     print('temperature peak', np.nanpercentile(np.max(outputs['temperature'], axis=0), (5, 50, 95)))  # peak temperature
-    print('forcing     2101', np.nanpercentile(outputs['radiative_forcing'][27, :], (5, 50, 95)))  # radiative forcing 2100
+    print('forcing     2101', np.nanpercentile(outputs['radiative_forcing'][26, :], (5, 50, 95)))  # radiative forcing 2100
 
     for variable in ['CO2_concentration', 'temperature', 'social_cost_of_carbon', 'CO2_FFI_emissions', 'radiative_forcing', 'consumption_per_capita', 'interest_rate']:
         df = pd.DataFrame(outputs[variable].T, columns = np.arange(2023, 2503, 3), index = configs)
