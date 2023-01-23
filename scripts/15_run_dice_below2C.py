@@ -1,4 +1,91 @@
+# TODO: change cumulative emissions to SSP126
 
+import json
+import os
+import subprocess
+
+from scipy.interpolate import interp1d
+import numpy as np
+from tqdm import tqdm
+import pandas as pd
+
+# should really import these constants from FaIR
+carbon_convert = 5.1352 * 12.011 / 28.97
+
+class InfeasibleSolutionError(Exception):
+    def __init__(self, run):
+        print(f"Infeasible solution in run number {run}.")
+
+here = os.path.dirname(os.path.realpath(__file__))
+
+df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'calibrated_constrained_parameters.csv'), index_col=0)
+configs = df_configs.index
+
+os.makedirs(os.path.join(here, 'gams_scripts'), exist_ok=True)
+os.makedirs(os.path.join(here, '..', 'data_output', 'dice_below2deg'), exist_ok=True)
+
+df_nonco2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'anthropogenic_non-co2_forcing_future_ssp126.csv'), index_col=0)
+df_cbox = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'gas_partitions_ssp126.csv'), index_col=0)
+df_cr = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'climate_response_params.csv'), index_col=0)
+df_co2 = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'co2_forcing_ssp126.csv'), index_col=0)
+df_temp = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'temperature_2023_ssp126.csv'), index_col=0)
+df_afolu = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'afolu_regression.csv'), index_col=0)
+df_nonco2_reg = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'nonco2_regression.csv'), index_col=0)
+#
+# order = df_nonco2_reg.loc[:, '0'].argsort()
+# ranks = order.argsort()
+# quantiles = ranks/10
+
+n_configs = 1001
+
+# Load RFF population scenarios and extend to 2500 using a growth rate that converges to zero
+df_pop = pd.read_csv(os.path.join(here, '..', 'data_input', 'rff_population_gdp', 'population.csv'), index_col=0)
+data_pop = df_pop.loc[:, '2020':'2300'].values
+growth_pop = (df_pop.loc[:, '2255':'2300'].values/df_pop.loc[:, '2250':'2295'].values).mean(axis=1)
+data_ext_pop = np.ones((10000, 43))
+data_ext_pop[:, 0] = growth_pop * data_pop[:, -1]
+
+for period in range(1, 43):
+    data_ext_pop[:, period] = data_ext_pop[:, period-1] * ((42-period)/42*growth_pop + period/42)
+
+population_sample = np.concatenate((data_pop, data_ext_pop), axis=1)/1e6
+# then interpolate to 3-year timesteps
+pop_years_in = np.arange(2020, 2520, 5)
+pop_years_out = np.arange(2023, 2501, 3)
+
+f = interp1d(pop_years_in, population_sample)
+population_sample_out = f(pop_years_out)
+
+# In this climate-only experiment, we are not modifying away from the median population projection.
+pop = np.median(population_sample_out, axis=0)
+
+afolu_const = df_afolu.loc['constant', 'coefficient']
+afolu_ffi = df_afolu.loc['CO2_EIP', 'coefficient']
+afolu_period = df_afolu.loc['period', 'coefficient']
+nonco2_const = df_nonco2_reg.loc['Intercept', 'coefficient']
+nonco2_ffi = df_nonco2_reg.loc['ffi', 'coefficient']
+nonco2_period = df_nonco2_reg.loc['period', 'coefficient']
+nonco2_quantile = df_nonco2_reg.loc['quantile', 'coefficient']
+
+for run, config in tqdm(enumerate(configs[:n_configs]), total=n_configs):
+    t1 = df_temp.loc[config, 'mixed_layer']
+    t2 = df_temp.loc[config, 'mid_ocean']
+    t3 = df_temp.loc[config, 'deep_ocean']
+    cr = df_cr.loc[config].values
+    f2x = df_co2.loc[config, 'effective_f2x']
+    r0 = df_configs.loc[config, 'r0']
+    ru = df_configs.loc[config, 'rU']
+    rt = df_configs.loc[config, 'rT']
+    ra = df_configs.loc[config, 'rA']
+    cbox1 = df_cbox.loc[config, 'geological']
+    cbox2 = df_cbox.loc[config, 'slow']
+    cbox3 = df_cbox.loc[config, 'mid']
+    cbox4 = df_cbox.loc[config, 'fast']
+    co2_2023 = df_cbox.loc[config, 'co2_2023']
+    co2_1750 = df_configs.loc[config, 'co2_concentration_1750']
+    nonco2 = df_nonco2.loc[config, :].values
+
+    template = f'''
 $ontext
 DICE with FaIR carbon cycle and climate response.
 
@@ -22,8 +109,8 @@ PARAMETERS
 ** If optimal control
         ifopt    Indicator where optimized is 1 and base is 0          /1/
 ** Preferences
-        elasmu   Elasticity of marginal utility of consumption         /1.45/
-        prstp    Initial rate of social time preference per year       /0.0015/
+        elasmu   Elasticity of marginal utility of consumption         /0.35/
+        prstp    Initial rate of social time preference per year       /0.0035/
 ** Technology and population (updated by CS)
         gama     Capital elasticity in production function             /0.300/
         dk       Depreciation rate on capital (per year)               /0.100/
@@ -32,114 +119,114 @@ PARAMETERS
         a0       Initial level of total factor productivity            /5.4028103629527156/
         ga0      Initial growth rate for TFP per 3 years               /0.045/
         dela     Decline rate of TFP per 3 years                       /0.003/
-        l(t)     /1 7.988088251080253, 2 8.219557765324929, 3 8.440416043973288, 4 8.649805513021741, 5 8.851171048047874,
-                  6 9.03764944287387, 7 9.216889609640976, 8 9.387041158658047, 9 9.544738372360976, 10 9.696205729551343,
-                 11 9.834688348182238, 12 9.961692239340886, 13 10.083764983814815, 14 10.190942946214331, 15 10.29655254704842,
-                 16 10.387845477781728, 17 10.473043633259689, 18 10.550827155655554, 19 10.625159849891618, 20 10.69672242725059,
-                 21 10.760310632680119, 22 10.821607491969688, 23 10.872651499412537, 24 10.924329404933914, 25 10.97441664735782,
-                 26 11.00827330325542, 27 11.039691973943045, 28 11.078352293557343, 29 11.104676186852354, 30 11.122549645864144,
-                 31 11.137677431718483, 32 11.153219763398546, 33 11.152831784211136, 34 11.165119816827008, 35 11.172117316134777,
-                 36 11.175218583557823, 37 11.17378472874312, 38 11.168060761697209, 39 11.153577285801841, 40 11.142629933116396,
-                 41 11.127001333818853, 42 11.12038645088574, 43 11.104510409276743, 44 11.058397503550564, 45 11.05115858627234,
-                 46 11.034926187219686, 47 10.996948960409744, 48 10.952535086999953, 49 10.91054522657011, 50 10.868377771775208,
-                 51 10.818953271780169, 52 10.777201533863444, 53 10.718134841690683, 54 10.657382577233498, 55 10.606255631421268,
-                 56 10.535857878455428, 57 10.466117448065495, 58 10.42018212410062, 59 10.345362223502901, 60 10.280836858083662,
-                 61 10.235999675212188, 62 10.155723353950364, 63 10.098198315103005, 64 10.016325248938319, 65 9.929925720534952,
-                 66 9.87808153233644, 67 9.801978930763712, 68 9.716681691185736, 69 9.61290175673765, 70 9.530377328345775,
-                 71 9.444024454399871, 72 9.363918233320815, 73 9.27135860381585, 74 9.179040700825478, 75 9.073130986446273,
-                 76 8.990951000354245, 77 8.877035331652452, 78 8.751179180330025, 79 8.688806858183712, 80 8.582313506050513,
-                 81 8.470542689743697, 82 8.348068944131262, 83 8.26995468174115, 84 8.185125968763323, 85 8.128437203454254,
-                 86 8.007063606827847, 87 7.910950500060649, 88 7.821116464356958, 89 7.728835184432587, 90 7.5981793053525255,
-                 91 7.514568481504303, 92 7.397201518044275, 93 7.330280071906696, 94 7.27817968212724, 95 7.212186062493577,
-                 96 7.132146502731247, 97 7.0345721126679255, 98 6.974907403392753, 99 6.904597002185975, 100 6.822626293068621,
-                 101 6.744325313940573, 102 6.6708059908591695, 103 6.596753523429123, 104 6.536600329592642, 105 6.466998205985376,
-                 106 6.3855403856097706, 107 6.334137534554594, 108 6.284183162715397, 109 6.232692107449714, 110 6.178043698130286,
-                 111 6.137034911851794, 112 6.0973983946730375, 113 6.061456877207328, 114 6.020827122243718, 115 5.989084145464406,
-                 116 5.936189700598368, 117 5.8842702949778225, 118 5.846595732660951, 119 5.81177029238532, 120 5.768980668470196,
-                 121 5.729046058496419, 122 5.679166265509125, 123 5.64606939686716, 124 5.613632357277553, 125 5.574713099792021,
-                 126 5.547020578715895, 127 5.494586385518065, 128 5.456310439541369, 129 5.41952012256769, 130 5.383449787086264,
-                 131 5.350543916306668, 132 5.333520886190516, 133 5.297483130245309, 134 5.273984682345418, 135 5.246486909426832,
-                 136 5.218894027914855, 137 5.191158464230827, 138 5.1669329883160255, 139 5.156581121697113, 140 5.1404253544505805,
-                 141 5.117524542187811, 142 5.099097428178003, 143 5.0816428038303805, 144 5.065144499191585, 145 5.049124354407201,
-                 146 5.0345164695480795, 147 5.020372592731726, 148 5.008044333964267, 149 4.9987866678595, 150 4.9898701739085105,
-                 151 4.98196793593992, 152 4.974401041288593, 153 4.967504833271792, 154 4.961274507988694, 155 4.955377124072447,
-                 156 4.950472366045965, 157 4.945896749512804, 158 4.941979415966289, 159 4.93871755622289, 160 4.935783433381051/
+        l(t)     /1 {pop[0]}, 2 {pop[1]}, 3 {pop[2]}, 4 {pop[3]}, 5 {pop[4]},
+                  6 {pop[5]}, 7 {pop[6]}, 8 {pop[7]}, 9 {pop[8]}, 10 {pop[9]},
+                 11 {pop[10]}, 12 {pop[11]}, 13 {pop[12]}, 14 {pop[13]}, 15 {pop[14]},
+                 16 {pop[15]}, 17 {pop[16]}, 18 {pop[17]}, 19 {pop[18]}, 20 {pop[19]},
+                 21 {pop[20]}, 22 {pop[21]}, 23 {pop[22]}, 24 {pop[23]}, 25 {pop[24]},
+                 26 {pop[25]}, 27 {pop[26]}, 28 {pop[27]}, 29 {pop[28]}, 30 {pop[29]},
+                 31 {pop[30]}, 32 {pop[31]}, 33 {pop[32]}, 34 {pop[33]}, 35 {pop[34]},
+                 36 {pop[35]}, 37 {pop[36]}, 38 {pop[37]}, 39 {pop[38]}, 40 {pop[39]},
+                 41 {pop[40]}, 42 {pop[41]}, 43 {pop[42]}, 44 {pop[43]}, 45 {pop[44]},
+                 46 {pop[45]}, 47 {pop[46]}, 48 {pop[47]}, 49 {pop[48]}, 50 {pop[49]},
+                 51 {pop[50]}, 52 {pop[51]}, 53 {pop[52]}, 54 {pop[53]}, 55 {pop[54]},
+                 56 {pop[55]}, 57 {pop[56]}, 58 {pop[57]}, 59 {pop[58]}, 60 {pop[59]},
+                 61 {pop[60]}, 62 {pop[61]}, 63 {pop[62]}, 64 {pop[63]}, 65 {pop[64]},
+                 66 {pop[65]}, 67 {pop[66]}, 68 {pop[67]}, 69 {pop[68]}, 70 {pop[69]},
+                 71 {pop[70]}, 72 {pop[71]}, 73 {pop[72]}, 74 {pop[73]}, 75 {pop[74]},
+                 76 {pop[75]}, 77 {pop[76]}, 78 {pop[77]}, 79 {pop[78]}, 80 {pop[79]},
+                 81 {pop[80]}, 82 {pop[81]}, 83 {pop[82]}, 84 {pop[83]}, 85 {pop[84]},
+                 86 {pop[85]}, 87 {pop[86]}, 88 {pop[87]}, 89 {pop[88]}, 90 {pop[89]},
+                 91 {pop[90]}, 92 {pop[91]}, 93 {pop[92]}, 94 {pop[93]}, 95 {pop[94]},
+                 96 {pop[95]}, 97 {pop[96]}, 98 {pop[97]}, 99 {pop[98]}, 100 {pop[99]},
+                 101 {pop[100]}, 102 {pop[101]}, 103 {pop[102]}, 104 {pop[103]}, 105 {pop[104]},
+                 106 {pop[105]}, 107 {pop[106]}, 108 {pop[107]}, 109 {pop[108]}, 110 {pop[109]},
+                 111 {pop[110]}, 112 {pop[111]}, 113 {pop[112]}, 114 {pop[113]}, 115 {pop[114]},
+                 116 {pop[115]}, 117 {pop[116]}, 118 {pop[117]}, 119 {pop[118]}, 120 {pop[119]},
+                 121 {pop[120]}, 122 {pop[121]}, 123 {pop[122]}, 124 {pop[123]}, 125 {pop[124]},
+                 126 {pop[125]}, 127 {pop[126]}, 128 {pop[127]}, 129 {pop[128]}, 130 {pop[129]},
+                 131 {pop[130]}, 132 {pop[131]}, 133 {pop[132]}, 134 {pop[133]}, 135 {pop[134]},
+                 136 {pop[135]}, 137 {pop[136]}, 138 {pop[137]}, 139 {pop[138]}, 140 {pop[139]},
+                 141 {pop[140]}, 142 {pop[141]}, 143 {pop[142]}, 144 {pop[143]}, 145 {pop[144]},
+                 146 {pop[145]}, 147 {pop[146]}, 148 {pop[147]}, 149 {pop[148]}, 150 {pop[149]},
+                 151 {pop[150]}, 152 {pop[151]}, 153 {pop[152]}, 154 {pop[153]}, 155 {pop[154]},
+                 156 {pop[155]}, 157 {pop[156]}, 158 {pop[157]}, 159 {pop[158]}, 160 {pop[159]}/
 ** Emissions parameters
         gsigma1  Initial growth of sigma (per year)                    /-0.0152/
         dsig     Decline rate of decarbonization (per period)          /-0.0006/
         e0       Industrial emissions 2023 (GtCO2 per year)            /36.64/
         miu0     Initial emissions control rate for base case 2023     /0.15/
 * Initial Conditions
-        co2_2023 Initial concentration in atmosphere 2023 (GtC)        /889.6215847922263/
-        co2_1750 Pre-industrial concentration atmosphere  (GtC)        /591.7810164433978/
+        co2_2023 Initial concentration in atmosphere 2023 (GtC)        /{co2_2023*carbon_convert}/
+        co2_1750 Pre-industrial concentration atmosphere  (GtC)        /{co2_1750*carbon_convert}/
 * These are for declaration and are defined later
         sig0     Carbon intensity 2023 (kgCO2 per output 2020 Int$)
 ** Climate model parameters
         g0       Carbon cycle parameter (Leach et al. 2021)
         g1       Carbon cycle parameter (Leach et al. 2021)
-        r0       Pre-industrial time-integrated airborne fraction      /32.10158825990729/
-        ru       Sensitivity of airborne fraction with CO2 uptake      /0.0025709655190405377/
-        rt       Sensitivity of airborne fraction with temperature     /2.3205670338781785/
-        ra       Sensitivity of airborne fraction with CO2 airborne    /0.002290070024078019/
+        r0       Pre-industrial time-integrated airborne fraction      /{r0}/
+        ru       Sensitivity of airborne fraction with CO2 uptake      /{ru}/
+        rt       Sensitivity of airborne fraction with temperature     /{rt}/
+        ra       Sensitivity of airborne fraction with CO2 airborne    /{ra}/
         tau(box) Lifetimes of the four atmospheric carbon boxes
                      / 1 1e9, 2 394.4, 3 36.54, 4 4.304 /
         a(box)   Partition fraction of the four atmospheric carbon boxes
                      / 1 0.2173, 2 0.2240, 3 0.2824, 4 0.2763 /
-        ICBOX1   Initial GtC concentration of carbon box 1 in 2023     /154.80699091792675/
-        ICBOX2   Initial GtC concentration of carbon box 2 in 2023     /103.65360331724233/
-        ICBOX3   Initial GtC concentration of carbon box 3 in 2023     /34.51532627794454/
-        ICBOX4   Initial GtC concentration of carbon box 4 in 2023     /4.864647835714846/
+        ICBOX1   Initial GtC concentration of carbon box 1 in 2023     /{cbox1}/
+        ICBOX2   Initial GtC concentration of carbon box 2 in 2023     /{cbox2}/
+        ICBOX3   Initial GtC concentration of carbon box 3 in 2023     /{cbox3}/
+        ICBOX4   Initial GtC concentration of carbon box 4 in 2023     /{cbox4}/
         iirf_horizon Time horizon for IIRF in yr                       /100/
-        t1_0     three-layer "mixed layer" temperature change          /1.3217087264105274/
-        t2_0     three-layer "mid-ocean" temperature change            /0.8901262541365642/
-        t3_0     three-layer "deep-ocean" temperature change           /0.2524227507902022/
-        EBM_A11  Fast component of mixed layer temperature             /0.15256915189901307/
-        EBM_A12  Intermediate component of mixed layer temperature     /0.41075085947083784/
-        EBM_A13  Slow component of mixed layer temperature             /0.08901196369677765/
-        EBM_A21  Fast component of mid ocean temperature               /0.10880921861469263/
-        EBM_A22  Intermediate component of mid ocean temperature       /0.6264992567586622/
-        EBM_A23  Slow component of mid ocean temperature               /0.17476982279015252/
-        EBM_A31  Fast component of deep ocean temperature              /0.004277815623396934/
-        EBM_A32  Intermediate component of deep ocean temperature      /0.031676952777009/
-        EBM_A33  Slow component of deep ocean temperature              /0.9623122126201734/
-        EBM_B1   Forcing contribution to mixed layer                   /0.27594238244645386/
-        EBM_B2   Forcing component to ocean layer                      /0.0734728323416452/
-        EBM_B3   Forcing component to ocean layer                      /0.0014600935311228909/
-        fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /3.9425610579067656/
-        nonco2(t) /1 0.5062395532575598, 2 0.46725348691416, 3 0.4969657361852617, 4 0.5189003606316387, 5 0.5509512733824509,
-                  6 0.5806727670202155, 7 0.6085664868319323, 8 0.6354072143948735, 9 0.6662296121620834, 10 0.6910450067612115,
-                 11 0.7096009143849926, 12 0.7195107412438011, 13 0.7279231791636147, 14 0.7376687765842681, 15 0.7467257007146916,
-                 16 0.7539065952448363, 17 0.7665680622504518, 18 0.7826491201569947, 19 0.7957072754287283, 20 0.814735105131212,
-                 21 0.8330373158150861, 22 0.8552272537656302, 23 0.8825813889622045, 24 0.9073700138827844, 25 0.9197783350725736,
-                 26 0.9323387870772336, 27 0.946253813221158, 28 0.9480134088571852, 29 0.943572134418884, 30 0.9383890601774556,
-                 31 0.9329030308874712, 32 0.9265439804799284, 33 0.9197341184604322, 34 0.9122658907060962, 35 0.9053073922629532,
-                 36 0.8978816814493088, 37 0.8900056685947286, 38 0.8813892818037806, 39 0.8722983269079284, 40 0.8638596572133167,
-                 41 0.852641718456455, 42 0.844097454257922, 43 0.8356032224145094, 44 0.8265219147944157, 45 0.8154599195221331,
-                 46 0.8060876559174158, 47 0.7974187633007718, 48 0.7868551415957024, 49 0.7771941909303428, 50 0.7683952577678568,
-                 51 0.75815545986653, 52 0.7488624722606286, 53 0.7387888893530012, 54 0.7288584865032017, 55 0.7190018609674756,
-                 56 0.7094669961059104, 57 0.7003626889324738, 58 0.6913438783526583, 59 0.6825191236808544, 60 0.674031286278434,
-                 61 0.6647441652665654, 62 0.654642712531268, 63 0.6454015213970362, 64 0.6373416094035088, 65 0.62856705235127,
-                 66 0.6199525307370259, 67 0.6102228003955107, 68 0.602089087768349, 69 0.5929654199915774, 70 0.5849113357048281,
-                 71 0.5776171772655441, 72 0.5695981269768077, 73 0.5625770095466577, 74 0.5543517691250991, 75 0.5455772124359852,
-                 76 0.5369833043328053, 77 0.5305702187737615, 78 0.5212750385151916, 79 0.5124046441120584, 80 0.5051394798051141,
-                 81 0.500283319136521, 82 0.4957768418472829, 83 0.4916274677731979, 84 0.4878886981111477, 85 0.4845509603609101,
-                 86 0.481559599144872, 87 0.479174919278343, 88 0.4770151684775772, 89 0.4750430063986404, 90 0.4732295390106598,
-                 91 0.4715521857673568, 92 0.4700432279595963, 93 0.4685869916815217, 94 0.4672098185208317, 95 0.4658956877188995,
-                 96 0.4646646634675757, 97 0.4634854360604412, 98 0.4623021874197042, 99 0.460636111944938, 100 0.4594921639184363,
-                 101 0.4585228907646692, 102 0.4577889516442999, 103 0.4567674871458401, 104 0.4558285976313599, 105 0.4549589728769521,
-                 106 0.4541150118193217, 107 0.4532473366960768, 108 0.4524147995203508, 109 0.4516155755539935, 110 0.4508479687040653,
-                 111 0.4501103987319824, 112 0.4494411602945674, 113 0.448899168318188, 114 0.4483790852808734, 115 0.4478798496802414,
-                 116 0.447238533190503, 117 0.4466199118235884, 118 0.4460265146243972, 119 0.4457170003128053, 120 0.4454286607663847,
-                 121 0.4451559887374982, 122 0.4447062607706895, 123 0.4440581625428312, 124 0.4437193149099125, 125 0.4433936085666454,
-                 126 0.4430804226101514, 127 0.4427791705812773, 128 0.4424892982047184, 129 0.4422102813042303, 130 0.4419416238767217,
-                 131 0.4416432967556808, 132 0.4413233478483067, 133 0.4409370500011231, 134 0.4405210672813319, 135 0.4402991812762256,
-                 136 0.4401130340375401, 137 0.4398788764005802, 138 0.4396181965634515, 139 0.4393949615375962, 140 0.4392195835292573,
-                 141 0.4390267919920524, 142 0.4389267597191462, 143 0.4388389707274407, 144 0.4387573799625604, 145 0.4385791811869696,
-                 146 0.4382898920055925, 147 0.4380765341888492, 148 0.4379932684998204, 149 0.4379280712383344, 150 0.4378672053920313,
-                 151 0.4378104901856294, 152 0.4377577524496618, 153 0.4377088262603489, 154 0.4376261465762592, 155 0.4374750280157145,
-                 156 0.4373280486395761, 157 0.4372169204148836, 158 0.437159321647241, 159 0.4371060796110461, 160 0.4370277731574776/
+        t1_0     three-layer "mixed layer" temperature change          /{t1}/
+        t2_0     three-layer "mid-ocean" temperature change            /{t2}/
+        t3_0     three-layer "deep-ocean" temperature change           /{t3}/
+        EBM_A11  Fast component of mixed layer temperature             /{cr[0]}/
+        EBM_A12  Intermediate component of mixed layer temperature     /{cr[1]}/
+        EBM_A13  Slow component of mixed layer temperature             /{cr[2]}/
+        EBM_A21  Fast component of mid ocean temperature               /{cr[3]}/
+        EBM_A22  Intermediate component of mid ocean temperature       /{cr[4]}/
+        EBM_A23  Slow component of mid ocean temperature               /{cr[5]}/
+        EBM_A31  Fast component of deep ocean temperature              /{cr[6]}/
+        EBM_A32  Intermediate component of deep ocean temperature      /{cr[7]}/
+        EBM_A33  Slow component of deep ocean temperature              /{cr[8]}/
+        EBM_B1   Forcing contribution to mixed layer                   /{cr[9]}/
+        EBM_B2   Forcing component to ocean layer                      /{cr[10]}/
+        EBM_B3   Forcing component to ocean layer                      /{cr[11]}/
+        fco22x   Forcing of equilibrium CO2 doubling (Wm-2)            /{f2x}/
+        nonco2(t) /1 {nonco2[0]}, 2 {nonco2[1]}, 3 {nonco2[2]}, 4 {nonco2[3]}, 5 {nonco2[4]},
+                  6 {nonco2[5]}, 7 {nonco2[6]}, 8 {nonco2[7]}, 9 {nonco2[8]}, 10 {nonco2[9]},
+                 11 {nonco2[10]}, 12 {nonco2[11]}, 13 {nonco2[12]}, 14 {nonco2[13]}, 15 {nonco2[14]},
+                 16 {nonco2[15]}, 17 {nonco2[16]}, 18 {nonco2[17]}, 19 {nonco2[18]}, 20 {nonco2[19]},
+                 21 {nonco2[20]}, 22 {nonco2[21]}, 23 {nonco2[22]}, 24 {nonco2[23]}, 25 {nonco2[24]},
+                 26 {nonco2[25]}, 27 {nonco2[26]}, 28 {nonco2[27]}, 29 {nonco2[28]}, 30 {nonco2[29]},
+                 31 {nonco2[30]}, 32 {nonco2[31]}, 33 {nonco2[32]}, 34 {nonco2[33]}, 35 {nonco2[34]},
+                 36 {nonco2[35]}, 37 {nonco2[36]}, 38 {nonco2[37]}, 39 {nonco2[38]}, 40 {nonco2[39]},
+                 41 {nonco2[40]}, 42 {nonco2[41]}, 43 {nonco2[42]}, 44 {nonco2[43]}, 45 {nonco2[44]},
+                 46 {nonco2[45]}, 47 {nonco2[46]}, 48 {nonco2[47]}, 49 {nonco2[48]}, 50 {nonco2[49]},
+                 51 {nonco2[50]}, 52 {nonco2[51]}, 53 {nonco2[52]}, 54 {nonco2[53]}, 55 {nonco2[54]},
+                 56 {nonco2[55]}, 57 {nonco2[56]}, 58 {nonco2[57]}, 59 {nonco2[58]}, 60 {nonco2[59]},
+                 61 {nonco2[60]}, 62 {nonco2[61]}, 63 {nonco2[62]}, 64 {nonco2[63]}, 65 {nonco2[64]},
+                 66 {nonco2[65]}, 67 {nonco2[66]}, 68 {nonco2[67]}, 69 {nonco2[68]}, 70 {nonco2[69]},
+                 71 {nonco2[70]}, 72 {nonco2[71]}, 73 {nonco2[72]}, 74 {nonco2[73]}, 75 {nonco2[74]},
+                 76 {nonco2[75]}, 77 {nonco2[76]}, 78 {nonco2[77]}, 79 {nonco2[78]}, 80 {nonco2[79]},
+                 81 {nonco2[80]}, 82 {nonco2[81]}, 83 {nonco2[82]}, 84 {nonco2[83]}, 85 {nonco2[84]},
+                 86 {nonco2[85]}, 87 {nonco2[86]}, 88 {nonco2[87]}, 89 {nonco2[88]}, 90 {nonco2[89]},
+                 91 {nonco2[90]}, 92 {nonco2[91]}, 93 {nonco2[92]}, 94 {nonco2[93]}, 95 {nonco2[94]},
+                 96 {nonco2[95]}, 97 {nonco2[96]}, 98 {nonco2[97]}, 99 {nonco2[98]}, 100 {nonco2[99]},
+                 101 {nonco2[100]}, 102 {nonco2[101]}, 103 {nonco2[102]}, 104 {nonco2[103]}, 105 {nonco2[104]},
+                 106 {nonco2[105]}, 107 {nonco2[106]}, 108 {nonco2[107]}, 109 {nonco2[108]}, 110 {nonco2[109]},
+                 111 {nonco2[110]}, 112 {nonco2[111]}, 113 {nonco2[112]}, 114 {nonco2[113]}, 115 {nonco2[114]},
+                 116 {nonco2[115]}, 117 {nonco2[116]}, 118 {nonco2[117]}, 119 {nonco2[118]}, 120 {nonco2[119]},
+                 121 {nonco2[120]}, 122 {nonco2[121]}, 123 {nonco2[122]}, 124 {nonco2[123]}, 125 {nonco2[124]},
+                 126 {nonco2[125]}, 127 {nonco2[126]}, 128 {nonco2[127]}, 129 {nonco2[128]}, 130 {nonco2[129]},
+                 131 {nonco2[130]}, 132 {nonco2[131]}, 133 {nonco2[132]}, 134 {nonco2[133]}, 135 {nonco2[134]},
+                 136 {nonco2[135]}, 137 {nonco2[136]}, 138 {nonco2[137]}, 139 {nonco2[138]}, 140 {nonco2[139]},
+                 141 {nonco2[140]}, 142 {nonco2[141]}, 143 {nonco2[142]}, 144 {nonco2[143]}, 145 {nonco2[144]},
+                 146 {nonco2[145]}, 147 {nonco2[146]}, 148 {nonco2[147]}, 149 {nonco2[148]}, 150 {nonco2[149]},
+                 151 {nonco2[150]}, 152 {nonco2[151]}, 153 {nonco2[152]}, 154 {nonco2[153]}, 155 {nonco2[154]},
+                 156 {nonco2[155]}, 157 {nonco2[156]}, 158 {nonco2[157]}, 159 {nonco2[158]}, 160 {nonco2[159]}/
 ** Climate damage parameters:
-        a2       Quadratic multiplier (DICE 2016)                      /0.00236/
+        a2       Quadratic multiplier (Howard & Sterner 2017 base)     /0.00236/
 ** Abatement cost
         expcost2  Exponent of control cost function                    /2.6/
         pback     Cost of backstop 2020$ per tCO2 2023                 /679/
@@ -299,15 +386,15 @@ EQUATIONS
  eindeq(t)..          EIND(t)        =E= sigma(t) * YGROSS(t) * (1-(MIU(t)));
  ccaeq(t+1)..         CCA(t+1)       =E= CCA(t)+ EIND(t)*tstep/3.664;
  ccatoteq(t)..        CCATOT(t)      =E= CCA(t)+cumetree(t);
-* nonco2eq1(tearly)..  nonco2(tearly) =E= -0.1365270772342576 + (0.0082836950889661)*EIND(tearly) + (0.0105854660990881)*quantile + (0.010257028140334)*tearly.val;
-* nonco2eq2(tlate)..   nonco2(tlate)  =E= -0.1365270772342576 + (0.0082836950889661)*EIND(tlate) + (0.0105854660990881)*quantile + (0.010257028140334)*27;
+* nonco2eq1(tearly)..  nonco2(tearly) =E= {nonco2_const} + ({nonco2_ffi})*EIND(tearly) + ({nonco2_quantile})*quantile + ({nonco2_period})*tearly.val;
+* nonco2eq2(tlate)..   nonco2(tlate)  =E= {nonco2_const} + ({nonco2_ffi})*EIND(tlate) + ({nonco2_quantile})*quantile + ({nonco2_period})*27;
  forceq(t)..          FORC(t)        =E= fco22x * ((log((CO2(t)/co2_1750))/log(2))) + nonco2(t);
  damfraceq(t) ..      DAMFRAC(t)     =E= a2*T1(t)**2;
  dameq(t)..           DAMAGES(t)     =E= YGROSS(t) * DAMFRAC(t);
  abateeq(t)..         ABATECOST(t)   =E= YGROSS(t) * cost1(t) * (MIU(t)**expcost2);
  mcabateeq(t)..       MCABATE(t)     =E= pbacktime(t) * MIU(t)**(expcost2-1);
  carbpriceeq(t)..     CPRICE(t)      =E= pbacktime(t) * (MIU(t))**(expcost2-1);
- etreeeq(t)..         etree(t)       =e= (1.5384744260084071 + (0.0463971352999719)*EIND(t) + (-0.1893399075947441)*t.val) * (1 - 1/(1+exp(-1.00*(t.val-35))));
+ etreeeq(t)..         etree(t)       =e= ({afolu_const} + ({afolu_ffi})*EIND(t) + ({afolu_period})*t.val) * (1 - 1/(1+exp(-1.00*(t.val-35))));
  cumetreeeq(t+1)..    cumetree(t+1)  =e= cumetree(t) + etree(t)*tstep/3.664;
 
 * Climate and carbon cycle
@@ -345,7 +432,8 @@ CCA.lo(t)             = 0;
 
 * Control rate limits
 MIU.up(t)             = limmiu;
-MIU.up(t)$(t.val<10)  = 1;
+MIU.up(t)$(t.val<8)   = 0.15*t.val;
+*MIU.up(t)$(t.val<10)  = 1;
 
 ** Upper and lower bounds for stability
 K.LO(t)         = 1;
@@ -404,7 +492,7 @@ solve DICE maximizing utility using nlp;
 ** POST-SOLVE
 * Calculate social cost of carbon and other variables
 scc(t)        = -1000*eeq.m(t)/(.00001+cc.m(t));
-ppm(t)        = co2.l(t)/2.1290606558508802;
+ppm(t)        = co2.l(t)/{carbon_convert};
 
 ** CALCULATE NON-CO2 EMISSIONS
 so2(tearly) = 65.8889 + 0.4514*eind.l(tearly) - 5.3944*tearly.val + 0.1335*tearly.val**2;
@@ -416,7 +504,7 @@ ch4(tlate)  = 203.4439 + 4.2581*eind.l(tlate) - 5.2576*27 + 0.1471*27**2;
 * For ALL relevant model outputs, see 'PutOutputAllT.gms' in the Include folder.
 * The statement at the end of the *.lst file "Output..." will tell you where to find the file.
 
-file results /"mean_config.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
+file results /"{here}/../data_output/dice_below2deg/{config:07d}.csv"/; results.nd = 10 ; results.nw = 0 ; results.pw=20000; results.pc=5;
 put results;
 put // "Period";
 Loop (T, put T.val);
@@ -509,3 +597,35 @@ Loop (T, put ch4(t));
 put / "Objective" ;
 put utility.l;
 putclose;
+    '''
+
+    # write the script
+    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.gms'), 'w') as f:
+        f.write(template)
+
+    # run the command
+    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.out'), "w") as outfile:
+        subprocess.run(
+            [
+                'gams',
+                os.path.join(
+                    here,
+                    'gams_scripts',
+                    f'config{config:07d}.gms'
+                ),
+                '-o',
+                os.path.join(
+                    here,
+                    'gams_scripts',
+                    f'config{config:07d}.lst'
+                ),
+            ],
+            stdout = outfile,
+        )
+
+
+    # were results feasible?
+    with open(os.path.join(here, 'gams_scripts', f'config{config:07d}.lst')) as f:
+        output = f.read()
+        if " ** Infeasible solution. Reduced gradient less than tolerance." in output:
+            raise InfeasibleSolutionError(run)

@@ -6,6 +6,7 @@ dependencies:
   - ipython
   - matplotlib
   - numpy
+  - netcdf4
   - pandas
   - pooch
   - py7zr
@@ -13,8 +14,9 @@ dependencies:
   - scmdata
   - scipy
   - statsmodels
+  - xarray
   - pip
   - pip:
-    - -e ../fair2.1-calibrate
+    - fair==2.1.0
     - aneris-iamc[units]
 

@@ -11,10 +11,11 @@ from fair.energy_balance_model import EnergyBalanceModel
 # the non-CO2 forcing including uncertainty, and second to 2020 to get the
 # C-cycle spin-ups.
 
+# get the AR6 calibration of FaIR v2.1
 here = os.path.dirname(os.path.realpath(__file__))
 os.makedirs(os.path.join(here, '..', 'data_output', 'climate_configs'), exist_ok=True)
 
-calibration = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'ar6_calibration_ebm3.csv'), index_col=0)
+calibration = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'calibrated_constrained_parameters.csv'), index_col=0)
 configs = calibration.index
 
 # required for running DICE
@@ -22,7 +23,7 @@ tstep = 3
 n_box = 3
 output=np.zeros((1001, 12))
 
-for i, config in tqdm(enumerate(configs)):
+for i, config in tqdm(enumerate(configs), desc="climate configs", total=len(output)):
     ebm = EnergyBalanceModel(
         ocean_heat_capacity = calibration.loc[config, 'c1':'c3'],
         ocean_heat_transfer = calibration.loc[config, 'kappa1':'kappa3'],
