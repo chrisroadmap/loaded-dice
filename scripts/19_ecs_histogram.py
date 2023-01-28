@@ -4,9 +4,9 @@ import matplotlib.pyplot as pl
 from matplotlib.ticker import ScalarFormatter
 import numpy as np
 import pandas as pd
+from scipy.stats import linregress
 
 from fair.energy_balance_model import EnergyBalanceModel
-from fair.forcing.ghg import meinshausen2020
 
 here = os.path.dirname(os.path.realpath(__file__))
 
@@ -19,18 +19,6 @@ configs = df_configs.index
 
 ecs = np.zeros(1001)
 tcr = np.zeros(1001)
-
-erf_2co2 = meinshausen2020(
-    np.array([554.30, 731.41, 273.87]) * np.ones((1, 1, 1, 3)),
-    np.array([277.15, 731.41, 273.87]) * np.ones((1, 1, 1, 3)),
-    np.array((1.05, 0.86, 1.07)) * np.ones((1, 1, 1, 1)),
-    np.ones((1, 1, 1, 3)),
-    np.array([True, False, False]),
-    np.array([False, True, False]),
-    np.array([False, False, True]),
-    np.array([False, False, False])
-).squeeze()[0]
-calibrated_f4co2_mean = df_configs['F_4xCO2'].mean()
 
 for i, config in enumerate(configs):
     ebm = EnergyBalanceModel(
@@ -64,9 +52,12 @@ outputs = {}
 
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     outputs[scenario] = {}
-    for variable in ['social_cost_of_carbon']:
-        df = pd.read_csv(os.path.join(here, '..', 'data_output', 'results', f'{scenario}__{variable}.csv'), index_col=0)
-        outputs[scenario][variable] = df[:].T.values[0, :]
+    df = pd.read_csv(os.path.join(here, '..', 'data_output', 'results', f'{scenario}__social_cost_of_carbon.csv'), index_col=0)
+    outputs[scenario]['social_cost_of_carbon'] = df[:].T.values[0, :]
+    df = pd.read_csv(os.path.join(here, '..', 'data_output', 'results', f'{scenario}__temperature.csv'), index_col=0)
+    outputs[scenario]['temperature_2050'] = df[:].T.values[9, :]
+    df = pd.read_csv(os.path.join(here, '..', 'data_output', 'results', f'{scenario}__CO2_total_emissions.csv'), index_col=0)
+    outputs[scenario]['CO2_total_emissions_2050'] = df[:].T.values[9, :]
 
 labels = {
     'dice': "'Optimal'",
@@ -83,6 +74,9 @@ colors = {
 fig, ax = pl.subplots(1, 1)
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     ax.scatter(ecs, outputs[scenario]['social_cost_of_carbon'], alpha=0.3, label=labels[scenario], color=colors[scenario])
+    lr = linregress(ecs, outputs[scenario]['social_cost_of_carbon'])
+    print(lr)
+    ax.plot(np.linspace(1.4, 7.5), lr.slope*np.linspace(1.4, 7.5) + lr.intercept, color='k')
 pl.yscale('log')
 ax.set_xlim(1, 8)
 ax.set_ylim(5, 12000)
@@ -96,9 +90,13 @@ pl.savefig(os.path.join(here, '..', 'figures', f'ecs_scc.png'))
 pl.savefig(os.path.join(here, '..', 'figures', f'ecs_scc.pdf'))
 pl.show()
 
+
 fig, ax = pl.subplots(1, 1)
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     ax.scatter(tcr, outputs[scenario]['social_cost_of_carbon'], alpha=0.3, label=labels[scenario], color=colors[scenario])
+    lr = linregress(tcr, outputs[scenario]['social_cost_of_carbon'])
+    print(lr)
+    ax.plot(np.linspace(1, 3.3), lr.slope*np.linspace(1, 3.3) + lr.intercept, color='k')
 pl.yscale('log')
 ax.set_xlim(0.8, 3.5)
 ax.set_ylim(5, 12000)
@@ -110,4 +108,60 @@ ax.legend(frameon=True)
 fig.tight_layout()
 pl.savefig(os.path.join(here, '..', 'figures', f'tcr_scc.png'))
 pl.savefig(os.path.join(here, '..', 'figures', f'tcr_scc.pdf'))
+pl.show()
+
+fig, ax = pl.subplots(1, 1)
+for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
+    ax.scatter(outputs[scenario]['temperature_2050'], outputs[scenario]['social_cost_of_carbon'], alpha=0.3, label=labels[scenario], color=colors[scenario])
+    lr = linregress(outputs[scenario]['temperature_2050'], outputs[scenario]['social_cost_of_carbon'])
+    print(lr)
+    ax.plot(np.linspace(1.05, 2.65), lr.slope*np.linspace(1.05, 2.65) + lr.intercept, color='k')
+pl.yscale('log')
+ax.set_xlim(1, 2.65)
+ax.set_ylim(5, 12000)
+ax.set_title("Temperature in 2050")
+ax.set_ylabel("Social cost of carbon, 2020\$")
+ax.set_xlabel("Global mean surface temperature anomaly, °C")
+ax.yaxis.set_major_formatter(ScalarFormatter())
+ax.legend(frameon=True)
+fig.tight_layout()
+#pl.savefig(os.path.join(here, '..', 'figures', f'tcr_scc.png'))
+#pl.savefig(os.path.join(here, '..', 'figures', f'tcr_scc.pdf'))
+pl.show()
+
+fig, ax = pl.subplots(1, 1)
+for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
+    ax.scatter(outputs[scenario]['CO2_total_emissions_2050'], outputs[scenario]['social_cost_of_carbon'], alpha=0.3, label=labels[scenario], color=colors[scenario])
+    lr = linregress(outputs[scenario]['CO2_total_emissions_2050'], outputs[scenario]['social_cost_of_carbon'])
+    print(lr)
+    ax.plot(np.linspace(-20, 60), lr.slope*np.linspace(-20, 60) + lr.intercept, color='k')
+pl.yscale('log')
+ax.set_xlim(-20, 60)
+ax.set_ylim(5, 12000)
+ax.set_title("CO$_2$ emissions in 2050")
+ax.set_ylabel("Social cost of carbon, 2020\$")
+ax.set_xlabel("Gt CO$_2$ yr$^{-1}$")
+ax.yaxis.set_major_formatter(ScalarFormatter())
+ax.legend(frameon=True)
+fig.tight_layout()
+#pl.savefig(os.path.join(here, '..', 'figures', f'tcr_scc.png'))
+#pl.savefig(os.path.join(here, '..', 'figures', f'tcr_scc.pdf'))
+pl.show()
+
+fig, ax = pl.subplots(1, 1)
+for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
+    ax.scatter(ecs, outputs[scenario]['CO2_total_emissions_2050'], alpha=0.3, label=labels[scenario], color=colors[scenario])
+    lr = linregress(ecs, outputs[scenario]['CO2_total_emissions_2050'])
+    print(lr)
+    #ax.plot(np.linspace(1.4, 7.5), lr.slope*np.linspace(1.4, 7.5) + lr.intercept, color='k')
+ax.set_xlim(1, 8)
+ax.set_ylim(-20, 60)
+ax.set_title("ECS v 2050 CO$_2$ emissions")
+ax.set_ylabel("Emissions in 2050, Gt CO$_2$ yr$^{-1}$")
+ax.set_xlabel("ECS, °C")
+ax.yaxis.set_major_formatter(ScalarFormatter())
+ax.legend(frameon=True)
+fig.tight_layout()
+pl.savefig(os.path.join(here, '..', 'figures', f'ecs_emissions2050.png'))
+pl.savefig(os.path.join(here, '..', 'figures', f'ecs_emissions2050.pdf'))
 pl.show()

@@ -13,7 +13,7 @@ from fair.io import read_properties
 from fair.interface import fill, initialise
 from fair.forcing.ghg import meinshausen2020
 
-pl.rcParams['figure.figsize'] = (17.4/2.54, 5.8/2.54)
+pl.rcParams['figure.figsize'] = (17.8/2.54, 5.9/2.54)
 pl.rcParams['font.size'] = 7
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'

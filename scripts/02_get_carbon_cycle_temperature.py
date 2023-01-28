@@ -10,22 +10,9 @@ from scipy.interpolate import interp1d
 from fair import FAIR
 from fair.io import read_properties
 from fair.interface import fill, initialise
-from fair.forcing.ghg import meinshausen2020
 
 here = os.path.dirname(os.path.realpath(__file__))
 os.makedirs(os.path.join(here, '..', 'data_output', 'climate_configs'), exist_ok=True)
-
-
-erf_2co2 = meinshausen2020(
-    np.array([554.30, 731.41, 273.87]) * np.ones((1, 1, 1, 3)),
-    np.array([277.15, 731.41, 273.87]) * np.ones((1, 1, 1, 3)),
-    np.array((1.05, 0.86, 1.07)) * np.ones((1, 1, 1, 1)),
-    np.ones((1, 1, 1, 3)),
-    np.array([True, False, False]),
-    np.array([False, True, False]),
-    np.array([False, False, True]),
-    np.array([False, False, False])
-).squeeze()[0]
 
 scenarios = ['ssp119', 'ssp126', 'ssp245', 'ssp370']
 
