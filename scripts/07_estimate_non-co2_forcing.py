@@ -12,7 +12,7 @@ from scipy.signal import savgol_filter
 from matplotlib.lines import Line2D
 #import scipy.optimize as op
 
-pl.rcParams['figure.figsize'] = (17.4/2.54, 8.7/2.54)
+pl.rcParams['figure.figsize'] = (17.8/2.54, 8.9/2.54)
 pl.rcParams['font.size'] = 7
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'

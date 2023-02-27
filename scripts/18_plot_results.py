@@ -50,6 +50,7 @@ for i, config in enumerate(configs):
 
 yunit = {
     'CO2_FFI_emissions': 'GtCO$_2$ yr$^{-1}$',
+    'CO2_total_emissions': 'GtCO$_2$ yr$^{-1}$',
     'CO2_concentration': 'ppm',
     'temperature': '°C relative to 1850-1900',
     'social_cost_of_carbon': '\$(2020) tCO$_2^{-1}$',
@@ -57,6 +58,7 @@ yunit = {
 }
 title = {
     'CO2_FFI_emissions': '(a) CO$_2$ fossil emissions',
+    'CO2_total_emissions': '(a) CO$_2$ emissions',
     'CO2_concentration': '(b) CO$_2$ concentrations',
     'temperature': '(d) Surface temperature',
     'social_cost_of_carbon': 'Social cost of carbon',
@@ -64,6 +66,7 @@ title = {
 }
 ylim = {
     'CO2_FFI_emissions': (-20, 55),
+    'CO2_total_emissions': (-20, 55),
     'CO2_concentration': (300, 750),
     'temperature': (0.5, 4),
     'social_cost_of_carbon': (0, 4000),
@@ -82,19 +85,25 @@ colors = {
 
 outputs = {}
 
+np.set_printoptions(precision=3)
+
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     outputs[scenario] = {}
-    for variable in ['CO2_concentration', 'temperature', 'social_cost_of_carbon', 'CO2_FFI_emissions', 'radiative_forcing']:
+    for variable in ['net_zero_year', 'CO2_concentration', 'temperature', 'social_cost_of_carbon', 'CO2_FFI_emissions', 'CO2_total_emissions', 'radiative_forcing']:
         df = pd.read_csv(os.path.join(here, '..', 'data_output', 'results', f'{scenario}__{variable}.csv'), index_col=0)
         outputs[scenario][variable] = df[:].T.values
 
-    print('emissions   2101', np.nanpercentile(outputs[scenario]['CO2_FFI_emissions'][26, :], (5, 50, 95)))  # CO2 fossil emissions 2100
-    print('emissions   2050', np.nanpercentile(outputs[scenario]['CO2_FFI_emissions'][9, :], (5, 50, 95)))  # CO2 fossil emissions 2100
-    print('SCC         2023', np.nanpercentile(outputs[scenario]['social_cost_of_carbon'][0, :], (5, 50, 95))) # social cost of carbon 2020
-    print('temperature 2101', np.nanpercentile(outputs[scenario]['temperature'][26, :], (5, 50, 95)))  # temperature 2100
-    print('temperature peak', np.nanpercentile(np.max(outputs[scenario]['temperature'], axis=0), (5, 50, 95)))  # peak temperature
-    print('forcing     2101', np.nanpercentile(outputs[scenario]['radiative_forcing'][26, :], (5, 50, 95)))  # radiative forcing 2100
-
+    print(scenario)
+    print('CO2 FFI emissions   2101', np.nanpercentile(outputs[scenario]['CO2_FFI_emissions'][26, :], (5, 16, 33, 50, 67, 84, 95)))  # CO2 fossil emissions 2100
+    print('CO2 FFI emissions   2050', np.nanpercentile(outputs[scenario]['CO2_FFI_emissions'][9, :], (5, 16, 33, 50, 67, 84, 95)))  # CO2 fossil emissions 2100
+    print('CO2 total emissions 2101', np.nanpercentile(outputs[scenario]['CO2_total_emissions'][26, :], (5, 16, 33, 50, 67, 84, 95)))  # CO2 fossil emissions 2100
+    print('CO2 total emissions 2050', np.nanpercentile(outputs[scenario]['CO2_total_emissions'][9, :], (5, 16, 33, 50, 67, 84, 95)))  # CO2 fossil emissions 2100
+    print('SCC                 2023', np.nanpercentile(outputs[scenario]['social_cost_of_carbon'][0, :], (5, 16, 33, 50, 67, 84, 95))) # social cost of carbon 2020
+    print('temperature         2101', np.nanpercentile(outputs[scenario]['temperature'][26, :], (5, 16, 33, 50, 67, 84, 95)))  # temperature 2100
+    print('temperature         peak', np.nanpercentile(np.max(outputs[scenario]['temperature'], axis=0), (5, 16, 33, 50, 67, 84, 95)))  # peak temperature
+    print('forcing             2101', np.nanpercentile(outputs[scenario]['radiative_forcing'][26, :], (5, 16, 33, 50, 67, 84, 95)))  # radiative forcing 2100
+    print('net zero year           ', np.nanpercentile(outputs[scenario]['net_zero_year'][:], (5, 16, 33, 50, 67, 84, 95)))  # net zero year
+    print()
     # fig, ax = pl.subplots(2,2)
     # for i, variable in enumerate(['CO2_FFI_emissions', 'CO2_concentration', 'temperature', 'social_cost_of_carbon']):
     #     ax[i//2,i%2].fill_between(
@@ -128,7 +137,8 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     # pl.show()
 
 fig, ax = pl.subplots(2,3)
-for i, variable in enumerate(['CO2_FFI_emissions', 'CO2_concentration', 'temperature', 'radiative_forcing']):
+for i, variable in enumerate(['CO2_total_emissions', 'CO2_concentration', 'temperature', 'radiative_forcing']):
+#for i, variable in enumerate(['CO2_FFI_emissions', 'CO2_concentration', 'temperature', 'radiative_forcing']):
     for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
         ax[i//2,i%2].fill_between(
             np.arange(2023, 2134, 3),
@@ -188,10 +198,17 @@ ax[0,2].xaxis.set_major_formatter(ScalarFormatter())
 
 
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
-    ax[1,2].scatter(ecs, outputs[scenario]['social_cost_of_carbon'][0, :], alpha=0.3, label=labels[scenario], color=colors[scenario])
+    ax[1,2].scatter(
+        ecs,
+        outputs[scenario]['social_cost_of_carbon'][0, :],
+        s=7,
+        alpha=0.3,
+        label=labels[scenario],
+        color=colors[scenario]
+    )
 ax[1,2].set_yscale('log')
-ax[1,2].set_xlim(1, 7)
-ax[1,2].set_ylim(5, 10000)
+ax[1,2].set_xlim(1, 7.5)
+ax[1,2].set_ylim(5, 12000)
 ax[1,2].set_title("(f) ECS versus SCC")
 ax[1,2].set_ylabel("Social cost of carbon in 2023, 2020\$")
 ax[1,2].set_xlabel("ECS, °C")
