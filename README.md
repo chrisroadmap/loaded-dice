@@ -1,5 +1,5 @@
 # loaded-dice
-Investigating the impact of climate uncertainty on climate economics using a simple cost-benefit IAM. Note this is still a work in progress and many things need to be improved.
+Investigating the impact of climate uncertainty on climate economics using a simple cost-benefit IAM (DICE) with the climate component updated with a calibrated, constrained Monte Carlo ensemble of the FaIR model (v2.1). Paper submitted.
 
 ## Requirements
 - A licensed version of GAMS. Maybe I'll make a python version in the future.
