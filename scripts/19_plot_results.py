@@ -8,7 +8,7 @@ import pandas as pd
 from fair.energy_balance_model import EnergyBalanceModel
 from fair.forcing.ghg import meinshausen2020
 
-pl.rcParams['figure.figsize'] = (17.8/2.54, 11.9/2.54)
+pl.rcParams['figure.figsize'] = (11.9/2.54, 11.9/2.54)
 pl.rcParams['font.size'] = 7 #20
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'
@@ -60,9 +60,9 @@ title = {
     'CO2_FFI_emissions': '(a) CO$_2$ fossil emissions',
     'CO2_total_emissions': '(a) CO$_2$ emissions',
     'CO2_concentration': '(b) CO$_2$ concentrations',
-    'temperature': '(d) Surface temperature',
+    'temperature': '(b) Surface temperature',
     'social_cost_of_carbon': 'Social cost of carbon',
-    'radiative_forcing': '(e) Effective radiative forcing'
+    'radiative_forcing': '(c) Effective radiative forcing'
 }
 ylim = {
     'CO2_FFI_emissions': (-20, 55),
@@ -136,8 +136,8 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     # pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections_{scenario}.pdf'))
     # pl.show()
 
-fig, ax = pl.subplots(2,3)
-for i, variable in enumerate(['CO2_total_emissions', 'CO2_concentration', 'temperature', 'radiative_forcing']):
+fig, ax = pl.subplots(2,2)
+for i, variable in enumerate(['CO2_total_emissions', 'temperature', 'radiative_forcing']):
 #for i, variable in enumerate(['CO2_FFI_emissions', 'CO2_concentration', 'temperature', 'radiative_forcing']):
     for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
         ax[i//2,i%2].fill_between(
@@ -169,7 +169,7 @@ for i, variable in enumerate(['CO2_total_emissions', 'CO2_concentration', 'tempe
     ax[i//2,i%2].set_xticks(np.arange(2025, 2130, 25))
     ax[i//2,i%2].axhline(0, ls=':', color='k')
     ax[i//2,i%2].axvline(2100, ls=':', color='k')
-ax[0,1].legend(fontsize=6, frameon=False)
+ax[1,0].legend(fontsize=6, frameon=False)
 fig.tight_layout()
 #pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections.png'))
 #pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections.pdf'))
@@ -178,7 +178,7 @@ fig.tight_layout()
 #pl.rcParams['figure.figsize'] = (20/2.54, 20/2.54)
 #fig, ax = pl.subplots(1, 1)
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
-    ax[0,2].hist(
+    ax[1,1].hist(
         outputs[scenario]['social_cost_of_carbon'][0, :],
         alpha=0.5,
         label=labels[scenario],
@@ -187,32 +187,32 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
         bins=np.logspace(-1, 4, 101),
         log=True
     )
-ax[0,2].set_xscale('log')
+ax[1,1].set_xscale('log')
 pl.rcParams['xtick.minor.visible'] = True
-ax[0,2].set_xlim(6, 10000)
-ax[0,2].set_title("(c) Social cost of carbon in 2023")
-ax[0,2].set_xlabel("(2020\$)")
-ax[0,2].set_ylabel("Density")
-ax[0,2].set_yticklabels([])
-ax[0,2].xaxis.set_major_formatter(ScalarFormatter())
+ax[1,1].set_xlim(6, 10000)
+ax[1,1].set_title("(d) Social cost of carbon in 2023")
+ax[1,1].set_xlabel("(2020\$)")
+ax[1,1].set_ylabel("Density")
+ax[1,1].set_yticklabels([])
+ax[1,1].xaxis.set_major_formatter(ScalarFormatter())
 
 
-for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
-    ax[1,2].scatter(
-        ecs,
-        outputs[scenario]['social_cost_of_carbon'][0, :],
-        s=7,
-        alpha=0.3,
-        label=labels[scenario],
-        color=colors[scenario]
-    )
-ax[1,2].set_yscale('log')
-ax[1,2].set_xlim(1, 7.5)
-ax[1,2].set_ylim(5, 12000)
-ax[1,2].set_title("(f) ECS versus SCC")
-ax[1,2].set_ylabel("Social cost of carbon in 2023, 2020\$")
-ax[1,2].set_xlabel("ECS, °C")
-ax[1,2].yaxis.set_major_formatter(ScalarFormatter())
+# for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
+#     ax[1,2].scatter(
+#         ecs,
+#         outputs[scenario]['social_cost_of_carbon'][0, :],
+#         s=7,
+#         alpha=0.3,
+#         label=labels[scenario],
+#         color=colors[scenario]
+#     )
+# ax[1,2].set_yscale('log')
+# ax[1,2].set_xlim(1, 7.5)
+# ax[1,2].set_ylim(5, 12000)
+# ax[1,2].set_title("(f) ECS versus SCC")
+# ax[1,2].set_ylabel("Social cost of carbon in 2023, 2020\$")
+# ax[1,2].set_xlabel("ECS, °C")
+# ax[1,2].yaxis.set_major_formatter(ScalarFormatter())
 
 #ax.yaxis.set_major_formatter(ScalarFormatter())
 #ax.legend(fontsize=14, frameon=False)
