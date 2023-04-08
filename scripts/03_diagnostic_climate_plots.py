@@ -22,10 +22,9 @@ pl.rcParams['figure.dpi'] = 150
 here = os.path.dirname(os.path.realpath(__file__))
 
 # data source: https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_mm_gl.txt
-# accessed: 2023-01-19
-# method: extrapolate the growth rate over last 12 months from Oct21 to Oct22
-# add 2.5 months to Oct 2022 (assumed mid-month) to estimate turn of year 2023
-co2_20230101_noaa = 418.27
+# accessed: 2023-04-03
+# method: use Dec 2022 "trend" value and add half of the difference from Nov 2022 to Dec 2022
+co2_20230101_noaa = 418.345
 print(co2_20230101_noaa)
 
 ar6_gmst = pd.read_csv(os.path.join(here, '..', 'data_input', 'wg1', 'AR6_GMST.csv'), index_col=0)
@@ -38,7 +37,7 @@ years_obs = np.array(ar6_gmst.index, dtype=float)
 fig, ax = pl.subplots(1,2)
 data = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'temperature_historical_ssp245.csv'), index_col=0)
 years = np.array(data.columns, dtype=int)
-ax[0].fill_between(years, np.percentile(data.T, 5, axis=1), np.percentile(data.T, 95, axis=1), label="FaIR 90% range")
+ax[0].fill_between(years, np.percentile(data.T, 5, axis=1), np.percentile(data.T, 95, axis=1), label="FaIR 5-95% range", color='0.7')
 ax[0].plot(years, np.median(data.T, axis=1), color='k', label="FaIR median")
 ax[0].plot(years_obs+0.5, ar6_gmst['gmst'], color='r', label="IPCC AR6 best estimate")
 ax[0].set_title("(a) Historical warming")
@@ -49,8 +48,8 @@ ax[0].set_ylim(-.3, 1.5)
 ax[0].legend()
 
 data = pd.read_csv(os.path.join(here, '..', 'data_output', 'climate_configs', 'gas_partitions_ssp245.csv'))
-hgdata = ax[1].hist(data['co2_2023'], bins=np.arange(np.floor(np.min(data['co2_2023'])), np.ceil(np.max(data['co2_2023']))+0.5, 0.5), label="FaIR")
-ax[1].axvline(co2_20230101_noaa, color='r', label="NOAA")
+hgdata = ax[1].hist(data['co2_2023'], bins=np.arange(np.floor(np.min(data['co2_2023'])), np.ceil(np.max(data['co2_2023']))+0.5, 0.5), label="FaIR", color='0.7')
+ax[1].axvline(co2_20230101_noaa, color='r', label="NOAA GML")
 ax[1].set_title("(b) CO$_2$ concentration, start of 2023")
 ax[1].set_xlabel('ppm')
 ax[1].set_ylabel('Count')

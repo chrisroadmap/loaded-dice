@@ -229,6 +229,11 @@ pl.savefig(os.path.join(here, '..', 'figures', 'temperature_projections.png'))
 pl.savefig(os.path.join(here, '..', 'figures', 'temperature_projections.pdf'))
 pl.show()
 
+print(species[56:58])
+
 for i, scenario in enumerate(scenarios):
     df = pd.DataFrame((np.nansum(f.forcing[n_hist-1:, i, :, :], axis=-1) - f.forcing[n_hist-1:, i, :, 2] - f.forcing[n_hist-1:, i, :, 54:56].mean(axis=-1)), index=range(end_hist, end+1, timestep), columns=configs).T
     df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'anthropogenic_non-co2_forcing_future_{scenario}.csv'))
+
+df = pd.DataFrame(np.sum(f.forcing[88, 2, :, 56:58], axis=-1), index=configs)
+df.to_csv(os.path.join(here, '..', 'data_output', 'climate_configs', f'aerosol_forcing_2014.csv'))
