@@ -4,8 +4,8 @@ import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
 
-pl.rcParams['figure.figsize'] = (17.8/2.54, 8.9/2.54)
-pl.rcParams['font.size'] = 7
+pl.rcParams['figure.figsize'] = (25.96/2.54, 12.88/2.54)
+pl.rcParams['font.size'] = 14
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'
 pl.rcParams['ytick.minor.visible'] = True
@@ -17,7 +17,7 @@ pl.rcParams['xtick.major.top'] = True
 pl.rcParams['xtick.top'] = True
 pl.rcParams['axes.spines.top'] = True
 pl.rcParams['axes.spines.bottom'] = True
-pl.rcParams['figure.dpi'] = 150
+pl.rcParams['figure.dpi'] = 300
 
 here = os.path.dirname(os.path.realpath(__file__))
 

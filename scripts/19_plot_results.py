@@ -8,8 +8,8 @@ import pandas as pd
 from fair.energy_balance_model import EnergyBalanceModel
 from fair.forcing.ghg import meinshausen2020
 
-pl.rcParams['figure.figsize'] = (11.9/2.54, 11.9/2.54)
-pl.rcParams['font.size'] = 7 #20
+pl.rcParams['figure.figsize'] = (24.66/2.54, 24.66/2.54)
+pl.rcParams['font.size'] = 14 #20
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'
 pl.rcParams['ytick.minor.visible'] = True
@@ -21,7 +21,7 @@ pl.rcParams['xtick.major.top'] = True
 pl.rcParams['xtick.top'] = True
 pl.rcParams['axes.spines.top'] = True
 pl.rcParams['axes.spines.bottom'] = True
-pl.rcParams['figure.dpi'] = 150
+pl.rcParams['figure.dpi'] = 300
 
 here = os.path.dirname(os.path.realpath(__file__))
 

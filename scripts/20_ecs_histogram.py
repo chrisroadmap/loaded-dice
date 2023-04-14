@@ -35,8 +35,8 @@ for i, config in enumerate(configs):
     ebm.emergent_parameters()
     ecs[i], tcr[i] = (ebm.ecs, ebm.tcr)
 
-pl.rcParams['figure.figsize'] = (17.8/2.54, 6.0/2.54)
-pl.rcParams['font.size'] = 7 #20
+pl.rcParams['figure.figsize'] = (40.03/2.54, 13.48/2.54)
+pl.rcParams['font.size'] =14 #20
 pl.rcParams['font.family'] = 'Arial'
 pl.rcParams['ytick.direction'] = 'in'
 pl.rcParams['ytick.minor.visible'] = True
@@ -48,7 +48,7 @@ pl.rcParams['xtick.major.top'] = True
 pl.rcParams['xtick.top'] = True
 pl.rcParams['axes.spines.top'] = True
 pl.rcParams['axes.spines.bottom'] = True
-pl.rcParams['figure.dpi'] = 150
+pl.rcParams['figure.dpi'] = 300
 
 outputs = {}
 
@@ -99,9 +99,9 @@ ax[1].set_ylabel("Emissions in 2050, Gt CO$_2$ yr$^{-1}$")
 ax[1].set_xlabel("ECS, °C")
 ax[1].yaxis.set_major_formatter(ScalarFormatter())
 #ax[1].legend(frameon=True)
-ax[1].text(7.7, 25, "'Optimal'", ha='right', color=colors['dice'], fontweight='bold')
-ax[1].text(7.7, 18, "2°C", ha='right', color=colors['dice_below2deg'], fontweight='bold')
-ax[1].text(7.7, 11, "1.5°C", ha='right', color=colors['dice_1p5deglowOS'], fontweight='bold')
+ax[1].text(7.7, 25, "'Optimal'", ha='right', color=colors['dice'], fontweight='bold', size=18)
+ax[1].text(7.7, 18, "2°C", ha='right', color=colors['dice_below2deg'], fontweight='bold',size=18)
+ax[1].text(7.7, 11, "1.5°C", ha='right', color=colors['dice_1p5deglowOS'], fontweight='bold',size=18)
 
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     ax[2].scatter(df_aerosol.values.squeeze(), outputs[scenario]['social_cost_of_carbon'], alpha=0.3, label=labels[scenario], color=colors[scenario])
