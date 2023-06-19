@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as pl
 from matplotlib.lines import Line2D
 from matplotlib.ticker import ScalarFormatter
+from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
 
@@ -49,15 +50,15 @@ title = {
 ylim = {
     'CO2_FFI_emissions': (-20, 55),
     'CO2_total_emissions': (-20, 55),
-    'CO2_concentration': (300, 750),
+    'CO2_concentration': (250, 700),
     'temperature': (0.5, 4),
     'social_cost_of_carbon': (0, 4000),
     'radiative_forcing': (0, 7)
 }
 labels = {
-    'dice': 'DICE-2016R "optimal"',
-    'dice_below2deg': "Well-below 2°C",
-    'dice_1p5deglowOS': "1.5°C-low overshoot"
+    'dice': "'optimal'",
+    'dice_below2deg': "2°C",
+    'dice_1p5deglowOS': "1.5°C"
 }
 colors = {
     'dice': "#003f5c",
@@ -72,6 +73,28 @@ np.set_printoptions(precision=3)
 # Grab Nordhaus' DICE 2023
 df_dice2023 = pd.read_csv(os.path.join(here, '..', 'dice2023', 'DICE2022-b-3-17-3.csv'), index_col=0, sep=',', header=7, on_bad_lines='skip')
 df_dice2023.rename(columns={x:y for x,y in zip(df_dice2023.columns,range(2020, 2525, 5))}, inplace=True)
+
+# Grab Nordhaus' DICE 2016
+df_dice2016 = pd.read_csv(os.path.join(here, '..', 'dice2016', 'DICER3-opt.csv'), index_col=0, sep=',', header=4, on_bad_lines='skip')
+df_dice2016_2c = pd.read_csv(os.path.join(here, '..', 'dice2016', 'resultslimt20.gms.csv'), index_col=0, sep=',', header=4, on_bad_lines='skip')
+df_dice2016_1p5c = pd.read_csv(os.path.join(here, '..', 'dice2016', 'resultslimt15av100.gms.csv'), index_col=0, sep=',', header=4, on_bad_lines='skip')
+
+dice2016 = {}
+dice2016['dice'] = {}
+dice2016['dice_below2deg'] = {}
+dice2016['dice_1p5deglowOS'] = {}
+dice2016['dice']['CO2_total_emissions'] = df_dice2016.loc['Total Emissions GTCO2 per year', :].values.astype(float)
+dice2016['dice_below2deg']['CO2_total_emissions'] = df_dice2016_2c.loc['Total Emissions GTCO2 per year', :].values.astype(float)
+dice2016['dice_1p5deglowOS']['CO2_total_emissions'] = df_dice2016_1p5c.loc['Total Emissions GTCO2 per year', :].values.astype(float)
+dice2016['dice']['CO2_concentration'] = df_dice2016.loc['Atmospheric concentration C (ppm)', :].values.astype(float)
+dice2016['dice_below2deg']['CO2_concentration'] = df_dice2016_2c.loc['Atmospheric concentration C (ppm)', :].values.astype(float)
+dice2016['dice_1p5deglowOS']['CO2_concentration'] = df_dice2016_1p5c.loc['Atmospheric concentration C (ppm)', :].values.astype(float)
+dice2016['dice']['temperature'] = df_dice2016.loc['Atmospheric Temperature ', :].values.astype(float)
+dice2016['dice_below2deg']['temperature'] = df_dice2016_2c.loc['Atmospheric Temperature ', :].values.astype(float)
+dice2016['dice_1p5deglowOS']['temperature'] = df_dice2016_1p5c.loc['Atmospheric Temperature ', :].values.astype(float)
+dice2016['dice']['radiative_forcing'] = df_dice2016.loc['Forcings', :].values.astype(float)
+dice2016['dice_below2deg']['radiative_forcing'] = df_dice2016_2c.loc['Forcings', :].values.astype(float)
+dice2016['dice_1p5deglowOS']['radiative_forcing'] = df_dice2016_1p5c.loc['Forcings', :].values.astype(float)
 
 
 # the first instance is optimal, second is 2C, third is 1.5C
@@ -101,14 +124,14 @@ for i, variable in enumerate(['CO2_total_emissions', 'CO2_concentration', 'tempe
             alpha=0.2,
             lw=0
         )
-        ax[i//2,i%2].fill_between(
-            np.arange(2023, 2134, 3),
-            np.nanpercentile(outputs[scenario][variable][:37, :], 16, axis=1),
-            np.nanpercentile(outputs[scenario][variable][:37, :], 84, axis=1),
-            color=colors[scenario],
-            alpha=0.2,
-            lw=0
-        )
+        # ax[i//2,i%2].fill_between(
+        #     np.arange(2023, 2134, 3),
+        #     np.nanpercentile(outputs[scenario][variable][:37, :], 16, axis=1),
+        #     np.nanpercentile(outputs[scenario][variable][:37, :], 84, axis=1),
+        #     color=colors[scenario],
+        #     alpha=0.2,
+        #     lw=0
+        # )
         ax[i//2,i%2].plot(
             np.arange(2023, 2134, 3),
             np.nanmedian(outputs[scenario][variable][:37, :], axis=1),
@@ -122,7 +145,14 @@ for i, variable in enumerate(['CO2_total_emissions', 'CO2_concentration', 'tempe
             color=colors[scenario],
             ls='--',
         )
-    ax[i//2,i%2].set_xlim(2023,2125)
+        # DICE2016R
+        ax[i//2,i%2].plot(
+            np.arange(2015, 2135, 5),
+            dice2016[scenario][variable][:24],
+            color=colors[scenario],
+            ls=':',
+        )
+    ax[i//2,i%2].set_xlim(2015,2125)
     ax[i//2,i%2].set_title(title[variable])
     ax[i//2,i%2].set_ylabel(yunit[variable])
     ax[i//2,i%2].set_ylim(ylim[variable])
@@ -132,8 +162,10 @@ for i, variable in enumerate(['CO2_total_emissions', 'CO2_concentration', 'tempe
 ax[1,1].legend(fontsize=6, frameon=False, loc='upper left')
 
 line_this = Line2D([0], [0], label='this study (median)', color='k')
+u90_this = Patch(facecolor='k', lw=0, alpha=0.2, label='this study (5-95% range)')
 line_2023 = Line2D([0], [0], label='DICE2023', color='k', ls='--')
-ax[1,0].legend(handles=[line_this, line_2023], fontsize=6, frameon=False, loc='upper left')
+line_2016 = Line2D([0], [0], label='DICE2016', color='k', ls=':')
+ax[1,0].legend(handles=[line_this, u90_this, line_2023, line_2016], fontsize=6, frameon=False, loc='upper left')
 
 fig.tight_layout()
 
