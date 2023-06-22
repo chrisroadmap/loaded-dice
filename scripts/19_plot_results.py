@@ -1,7 +1,9 @@
 import os
 
 import matplotlib.pyplot as pl
+from matplotlib.lines import Line2D
 from matplotlib.ticker import ScalarFormatter
+from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
 
@@ -104,41 +106,9 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     print('forcing             2101', np.nanpercentile(outputs[scenario]['radiative_forcing'][26, :], (5, 16, 33, 50, 67, 84, 95)))  # radiative forcing 2100
     print('net zero year           ', np.nanpercentile(outputs[scenario]['net_zero_year'][:], (5, 16, 33, 50, 67, 84, 95)))  # net zero year
     print()
-    # fig, ax = pl.subplots(2,2)
-    # for i, variable in enumerate(['CO2_FFI_emissions', 'CO2_concentration', 'temperature', 'social_cost_of_carbon']):
-    #     ax[i//2,i%2].fill_between(
-    #         np.arange(2023, 2134, 3),
-    #         np.nanpercentile(outputs[scenario][variable][:37, :], 5, axis=1),
-    #         np.nanpercentile(outputs[scenario][variable][:37, :], 95, axis=1),
-    #         color=colors[scenario],
-    #         alpha=0.2
-    #     )
-    #     ax[i//2,i%2].fill_between(
-    #         np.arange(2023, 2134, 3),
-    #         np.nanpercentile(outputs[scenario][variable][:37, :], 16, axis=1),
-    #         np.nanpercentile(outputs[scenario][variable][:37, :], 84, axis=1),
-    #         color=colors[scenario],
-    #         alpha=0.2
-    #     )
-    #     ax[i//2,i%2].plot(
-    #         np.arange(2023, 2134, 3),
-    #         np.nanmedian(outputs[scenario][variable][:37, :], axis=1),
-    #         color=colors[scenario]
-    #     )
-    #     ax[i//2,i%2].set_xlim(2023,2125)
-    #     ax[i//2,i%2].set_title(title[variable])
-    #     ax[i//2,i%2].set_ylabel(yunit[variable])
-    #     ax[i//2,i%2].set_ylim(ylim[variable])
-    #     ax[i//2,i%2].set_xticks(np.arange(2025, 2130, 25))
-    #     ax[i//2,i%2].axhline(0, ls=':', color='k')
-    # fig.tight_layout()
-    # pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections_{scenario}.png'))
-    # pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections_{scenario}.pdf'))
-    # pl.show()
 
 fig, ax = pl.subplots(2,2)
 for i, variable in enumerate(['CO2_total_emissions', 'temperature', 'radiative_forcing']):
-#for i, variable in enumerate(['CO2_FFI_emissions', 'CO2_concentration', 'temperature', 'radiative_forcing']):
     for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
         ax[i//2,i%2].fill_between(
             np.arange(2023, 2134, 3),
@@ -171,12 +141,7 @@ for i, variable in enumerate(['CO2_total_emissions', 'temperature', 'radiative_f
     ax[i//2,i%2].axvline(2100, ls=':', color='k')
 ax[1,0].legend(fontsize=6, frameon=False)
 fig.tight_layout()
-#pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections.png'))
-#pl.savefig(os.path.join(here, '..', 'figures', f'climate_projections.pdf'))
-#pl.show()
 
-#pl.rcParams['figure.figsize'] = (20/2.54, 20/2.54)
-#fig, ax = pl.subplots(1, 1)
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     ax[1,1].hist(
         outputs[scenario]['social_cost_of_carbon'][0, :],
@@ -196,29 +161,12 @@ ax[1,1].set_ylabel("Density")
 ax[1,1].set_yticklabels([])
 ax[1,1].xaxis.set_major_formatter(ScalarFormatter())
 
+line_this = Line2D([0], [0], label='Median', color='k')
+u68_this = Patch(facecolor='k', lw=0, alpha=0.4, label='16-84% range')
+u90_this = Patch(facecolor='k', lw=0, alpha=0.2, label='5-95% range')
+ax[0,1].legend(handles=[line_this, u68_this, u90_this], fontsize=6, frameon=False, loc='upper left')
 
-# for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
-#     ax[1,2].scatter(
-#         ecs,
-#         outputs[scenario]['social_cost_of_carbon'][0, :],
-#         s=7,
-#         alpha=0.3,
-#         label=labels[scenario],
-#         color=colors[scenario]
-#     )
-# ax[1,2].set_yscale('log')
-# ax[1,2].set_xlim(1, 7.5)
-# ax[1,2].set_ylim(5, 12000)
-# ax[1,2].set_title("(f) ECS versus SCC")
-# ax[1,2].set_ylabel("Social cost of carbon in 2023, 2020\$")
-# ax[1,2].set_xlabel("ECS, °C")
-# ax[1,2].yaxis.set_major_formatter(ScalarFormatter())
-
-#ax.yaxis.set_major_formatter(ScalarFormatter())
-#ax.legend(fontsize=14, frameon=False)
 fig.tight_layout()
-#pl.savefig(os.path.join(here, '..', 'figures', f'scc_histogram.png'))
-#pl.savefig(os.path.join(here, '..', 'figures', f'scc_histogram.pdf'))
 pl.savefig(os.path.join(here, '..', 'figures', f'projections_scc_ecs.png'))
 pl.savefig(os.path.join(here, '..', 'figures', f'projections_scc_ecs.pdf'))
 pl.show()

@@ -169,7 +169,6 @@ ax[1,0].legend(handles=[line_this, u90_this, line_2023, line_2016], fontsize=6, 
 
 fig.tight_layout()
 
-
-#pl.savefig(os.path.join(here, '..', 'figures', f'projections_scc_ecs.png'))
-#pl.savefig(os.path.join(here, '..', 'figures', f'projections_scc_ecs.pdf'))
+pl.savefig(os.path.join(here, '..', 'figures', f'compare_dice2023_2016.png'))
+pl.savefig(os.path.join(here, '..', 'figures', f'compare_dice2023_2016.pdf'))
 pl.show()
