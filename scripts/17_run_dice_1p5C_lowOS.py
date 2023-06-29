@@ -429,7 +429,6 @@ CCA.lo(t)             = 0;
 * Control rate limits
 MIU.up(t)             = limmiu;
 MIU.up(t)$(t.val<8)   = 0.15*t.val;
-*MIU.up(t)$(t.val<10)  = 1;
 
 ** Upper and lower bounds for stability
 K.LO(t)         = 1;

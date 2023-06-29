@@ -23,6 +23,7 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     outputs['temperature'] = np.ones((160, ensemble_size)) * np.nan
     outputs['social_cost_of_carbon'] = np.ones((160, ensemble_size)) * np.nan
     outputs['CO2_FFI_emissions'] = np.ones((160, ensemble_size)) * np.nan
+    outputs['CO2_AFOLU_emissions'] = np.ones((160, ensemble_size)) * np.nan
     outputs['CO2_total_emissions'] = np.ones((160, ensemble_size)) * np.nan
     outputs['radiative_forcing'] = np.ones((160, ensemble_size)) * np.nan
     outputs['consumption_per_capita'] = np.ones((160, ensemble_size)) * np.nan
@@ -35,6 +36,7 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
         outputs['temperature'][:, run] = df.loc['Atmospheric Temperature rel. 1850-1900']
         outputs['social_cost_of_carbon'][:, run] = df.loc['Social cost of carbon']
         outputs['CO2_FFI_emissions'][:, run] = df.loc['Industrial Emissions GTCO2 per year']
+        outputs['CO2_AFOLU_emissions'][:, run] = df.loc['Land emissions']
         outputs['CO2_total_emissions'][:, run] = df.loc['Industrial Emissions GTCO2 per year'] + df.loc['Land emissions']
         outputs['radiative_forcing'][:, run] = df.loc['Forcings']
         outputs['consumption_per_capita'][:, run] = df.loc['Consumption Per Capita ']
@@ -47,7 +49,7 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
         frac = co2[zc2]/(co2[zc2]-co2[zc1])
         outputs['net_zero_year'][run] = year[zc1] * frac + year[zc2] * (1-frac)
 
-    for variable in ['CO2_concentration', 'temperature', 'social_cost_of_carbon', 'CO2_FFI_emissions', 'CO2_total_emissions', 'radiative_forcing', 'consumption_per_capita', 'interest_rate']:
+    for variable in ['CO2_concentration', 'temperature', 'social_cost_of_carbon', 'CO2_FFI_emissions', 'CO2_AFOLU_emissions', 'CO2_total_emissions', 'radiative_forcing', 'consumption_per_capita', 'interest_rate']:
         df = pd.DataFrame(outputs[variable].T, columns = np.arange(2023, 2503, 3), index = configs)
         df.to_csv(os.path.join(here, '..', 'data_output', 'results', f'{scenario}__{variable}.csv'))
     df = pd.DataFrame(outputs['net_zero_year'], index = configs)

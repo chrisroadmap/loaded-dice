@@ -28,11 +28,16 @@ os.makedirs(os.path.join(here, '..', 'figures'), exist_ok=True)
 
 ensemble_size=1001
 
+gcp_df = pd.read_csv(
+    os.path.join(here, '..', 'data_input', 'global-carbon-project', 'co2_emissions_1750-2022_prelim.csv')
+)
+
 df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'calibrated_constrained_parameters.csv'), index_col=0)
 configs = df_configs.index
 
 yunit = {
     'CO2_FFI_emissions': 'GtCO$_2$ yr$^{-1}$',
+    'CO2_AFOLU_emissions': 'CO$_2$ AFOLU, GtCO$_2$ yr$^{-1}$',
     'CO2_total_emissions': 'GtCO$_2$ yr$^{-1}$',
     'CO2_concentration': 'ppm',
     'temperature': '°C relative to 1850-1900',
@@ -41,6 +46,7 @@ yunit = {
 }
 title = {
     'CO2_FFI_emissions': '(a) CO$_2$ fossil emissions',
+    'CO2_AFOLU_emissions': 'CO$_2$ AFOLU emissions',
     'CO2_total_emissions': '(a) CO$_2$ emissions',
     'CO2_concentration': '(b) CO$_2$ concentrations',
     'temperature': '(c) Surface temperature',
@@ -49,6 +55,7 @@ title = {
 }
 ylim = {
     'CO2_FFI_emissions': (-20, 55),
+    'CO2_AFOLU_emissions': (-6, 7),
     'CO2_total_emissions': (-20, 55),
     'CO2_concentration': (250, 700),
     'temperature': (0.5, 4),
@@ -95,6 +102,9 @@ dice2016['dice_1p5deglowOS']['temperature'] = df_dice2016_1p5c.loc['Atmospheric 
 dice2016['dice']['radiative_forcing'] = df_dice2016.loc['Forcings', :].values.astype(float)
 dice2016['dice_below2deg']['radiative_forcing'] = df_dice2016_2c.loc['Forcings', :].values.astype(float)
 dice2016['dice_1p5deglowOS']['radiative_forcing'] = df_dice2016_1p5c.loc['Forcings', :].values.astype(float)
+dice2016['dice']['CO2_AFOLU_emissions'] = df_dice2016.loc['Land emissions', :].values.astype(float)
+dice2016['dice_below2deg']['CO2_AFOLU_emissions'] = df_dice2016_2c.loc['Land emissions', :].values.astype(float)
+dice2016['dice_1p5deglowOS']['CO2_AFOLU_emissions'] = df_dice2016_1p5c.loc['Land emissions', :].values.astype(float)
 
 
 # the first instance is optimal, second is 2C, third is 1.5C
@@ -105,11 +115,12 @@ for iscen, scenario in enumerate(['dice', 'dice_below2deg', 'dice_1p5deglowOS'])
     dice2023[scenario]['CO2_concentration'] = df_dice2023.loc['Atmospheric concentration C (ppm)', :].values[iscen,:].astype(float)
     dice2023[scenario]['temperature'] = df_dice2023.loc['Atmospheric temperaturer (deg c above preind) ', :].values[iscen,:].astype(float)
     dice2023[scenario]['radiative_forcing'] = df_dice2023.loc['Total forcings w/m2', :].values[iscen,:].astype(float)
+    dice2023[scenario]['CO2_AFOLU_emissions'] = df_dice2023.loc['Land emissions, GtCO2/year', :].values[iscen,:].astype(float)
 
 
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     outputs[scenario] = {}
-    for variable in ['net_zero_year', 'CO2_concentration', 'temperature', 'social_cost_of_carbon', 'CO2_FFI_emissions', 'CO2_total_emissions', 'radiative_forcing']:
+    for variable in ['net_zero_year', 'CO2_concentration', 'temperature', 'social_cost_of_carbon', 'CO2_FFI_emissions', 'CO2_AFOLU_emissions', 'CO2_total_emissions', 'radiative_forcing']:
         df = pd.read_csv(os.path.join(here, '..', 'data_output', 'results', f'{scenario}__{variable}.csv'), index_col=0)
         outputs[scenario][variable] = df[:].T.values
 
@@ -171,4 +182,61 @@ fig.tight_layout()
 
 pl.savefig(os.path.join(here, '..', 'figures', f'compare_dice2023_2016.png'))
 pl.savefig(os.path.join(here, '..', 'figures', f'compare_dice2023_2016.pdf'))
+pl.show()
+
+
+fig, ax = pl.subplots(figsize=(8.9/2.54, 8.9/2.54))
+for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
+    ax.fill_between(
+        np.arange(2023, 2155, 3),
+        np.nanpercentile(outputs[scenario]['CO2_AFOLU_emissions'][:44, :], 5, axis=1),
+        np.nanpercentile(outputs[scenario]['CO2_AFOLU_emissions'][:44, :], 95, axis=1),
+        color=colors[scenario],
+        alpha=0.2,
+        lw=0
+    )
+    ax.plot(
+        np.arange(2023, 2155, 3),
+        np.nanmedian(outputs[scenario]['CO2_AFOLU_emissions'][:44, :], axis=1),
+        color=colors[scenario],
+        label=labels[scenario],
+    )
+# DICE2023R
+ax.plot(
+    np.arange(2020, 2155, 5),
+    dice2023[scenario]['CO2_AFOLU_emissions'][:27],
+    color='k',
+    ls='--',
+)
+# DICE2016R
+ax.plot(
+    np.arange(2015, 2155, 5),
+    dice2016[scenario]['CO2_AFOLU_emissions'][:28],
+    color='k',
+    ls=':',
+)
+ax.set_xlim(2015,2150)
+ax.set_title(title['CO2_AFOLU_emissions'])
+ax.set_ylabel(yunit['CO2_AFOLU_emissions'])
+ax.set_xlabel('Year')  # only for nice lining up with other plot.
+ax.set_ylim(ylim['CO2_AFOLU_emissions'])
+ax.set_xticks(np.arange(2025, 2130, 25))
+ax.axhline(0, ls=':', lw=0.5, color='k')
+    #ax[i//2,i%2].axvline(2100, ls=':', color='k')
+ax.plot(gcp_df.Year, gcp_df["land-use change emissions"]*3.664, color='k', label='Global Carbon Project')
+
+line_opt = Line2D([0], [0], label='"Optimal"', color=colors['dice'])
+line_20c = Line2D([0], [0], label='Well-below 2°C', color=colors['dice_below2deg'])
+line_15c = Line2D([0], [0], label='1.5°C low overshoot', color=colors['dice_1p5deglowOS'])
+u90_this = Patch(facecolor='k', lw=0, alpha=0.2, label='5-95% ranges')
+line_2023 = Line2D([0], [0], label='DICE2023', color='k', ls='--')
+line_2016 = Line2D([0], [0], label='DICE2016', color='k', ls=':')
+line_gcp = Line2D([0], [0], label='Global Carbon Project', color='k')
+
+ax.legend(handles=[line_opt, line_20c, line_15c, u90_this, line_2023, line_2016, line_gcp], fontsize=6, frameon=False, loc='upper right')
+
+fig.tight_layout()
+
+pl.savefig(os.path.join(here, '..', 'figures', f'compare_AFOLU.png'))
+pl.savefig(os.path.join(here, '..', 'figures', f'compare_AFOLU.pdf'))
 pl.show()

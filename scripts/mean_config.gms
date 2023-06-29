@@ -23,7 +23,7 @@ PARAMETERS
         ifopt    Indicator where optimized is 1 and base is 0          /1/
 ** Preferences
         elasmu   Elasticity of marginal utility of consumption         /1.45/
-        prstp    Initial rate of social time preference per year       /0.0015/
+        prstp    Initial rate of social time preference per year       /0.015/
 ** Technology and population (updated by CS)
         gama     Capital elasticity in production function             /0.300/
         dk       Depreciation rate on capital (per year)               /0.100/
@@ -345,7 +345,7 @@ CCA.lo(t)             = 0;
 
 * Control rate limits
 MIU.up(t)             = limmiu;
-MIU.up(t)$(t.val<10)  = 1;
+MIU.up(t)$(t.val<8)   = 0.15*t.val;
 
 ** Upper and lower bounds for stability
 K.LO(t)         = 1;
