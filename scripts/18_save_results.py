@@ -13,10 +13,14 @@ os.makedirs(os.path.join(here, '..', 'data_output', 'results'), exist_ok=True)
 ensemble_size=1001
 year = np.arange(2023, 2503, 3)
 
-df_configs = pd.read_csv(os.path.join(here, '..', 'data_input', 'fair-2.1.0', 'calibrated_constrained_parameters.csv'), index_col=0)
+df_configs = pd.read_csv(
+    os.path.join(
+        here, '..', 'data_input', 'fair-2.1.0', 'calibrated_constrained_parameters.csv'
+    ), index_col=0
+)
 configs = df_configs.index
 
-for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
+for scenario in ['dice', 'dice_disc2pct', 'dice_below2deg', 'dice_1p5deglowOS']:
     dfs = []
     outputs = {}
     outputs['CO2_concentration'] = np.ones((160, ensemble_size)) * np.nan
@@ -29,6 +33,7 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     outputs['consumption_per_capita'] = np.ones((160, ensemble_size)) * np.nan
     outputs['interest_rate'] = np.ones((160, ensemble_size)) * np.nan
     outputs['net_zero_year'] = np.ones(ensemble_size) * np.nan
+    outputs['growth'] = np.ones((160, ensemble_size)) * np.nan
 
     for run, config in enumerate(configs[:ensemble_size]):
         df = pd.read_csv(os.path.join(here, "..", "data_output", scenario, f"{config:07d}.csv"), index_col=0)
@@ -49,7 +54,10 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
         frac = co2[zc2]/(co2[zc2]-co2[zc1])
         outputs['net_zero_year'][run] = year[zc1] * frac + year[zc2] * (1-frac)
 
-    for variable in ['CO2_concentration', 'temperature', 'social_cost_of_carbon', 'CO2_FFI_emissions', 'CO2_AFOLU_emissions', 'CO2_total_emissions', 'radiative_forcing', 'consumption_per_capita', 'interest_rate']:
+        # calculate growth in per capita consumption
+        outputs['growth'][:-1, run] = outputs['consumption_per_capita'][1:, run] / outputs['consumption_per_capita'][:-1, run]
+
+    for variable in ['CO2_concentration', 'temperature', 'social_cost_of_carbon', 'CO2_FFI_emissions', 'CO2_AFOLU_emissions', 'CO2_total_emissions', 'radiative_forcing', 'consumption_per_capita', 'interest_rate', 'growth']:
         df = pd.DataFrame(outputs[variable].T, columns = np.arange(2023, 2503, 3), index = configs)
         df.to_csv(os.path.join(here, '..', 'data_output', 'results', f'{scenario}__{variable}.csv'))
     df = pd.DataFrame(outputs['net_zero_year'], index = configs)

@@ -76,11 +76,13 @@ ylim = {
 }
 labels = {
     'dice': 'DICE-2016R "optimal"',
+    'dice_disc2pct': "Rennert et al.",
     'dice_below2deg': "Well-below 2°C",
-    'dice_1p5deglowOS': "1.5°C-low overshoot"
+    'dice_1p5deglowOS': "1.5°C overshoot"
 }
 colors = {
     'dice': "#003f5c",
+    'dice_disc2pct': "#1b98e0",
     'dice_below2deg': "#bc5090",
     'dice_1p5deglowOS': "#ffa600"
 }
@@ -89,7 +91,7 @@ outputs = {}
 
 np.set_printoptions(precision=3)
 
-for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
+for scenario in ['dice', 'dice_disc2pct', 'dice_below2deg', 'dice_1p5deglowOS']:
     outputs[scenario] = {}
     for variable in ['net_zero_year', 'CO2_concentration', 'temperature', 'social_cost_of_carbon', 'CO2_FFI_emissions', 'CO2_total_emissions', 'radiative_forcing']:
         df = pd.read_csv(os.path.join(here, '..', 'data_output', 'results', f'{scenario}__{variable}.csv'), index_col=0)
@@ -107,6 +109,7 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     print('net zero year           ', np.nanpercentile(outputs[scenario]['net_zero_year'][:], (5, 16, 33, 50, 67, 84, 95)))  # net zero year
     print()
 
+# Headline plot with three scenarios
 fig, ax = pl.subplots(2,2)
 for i, variable in enumerate(['CO2_total_emissions', 'temperature', 'radiative_forcing']):
     for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
@@ -169,4 +172,70 @@ ax[0,1].legend(handles=[line_this, u68_this, u90_this], fontsize=6, frameon=Fals
 fig.tight_layout()
 pl.savefig(os.path.join(here, '..', 'figures', f'projections_scc_ecs.png'))
 pl.savefig(os.path.join(here, '..', 'figures', f'projections_scc_ecs.pdf'))
+pl.show()
+
+
+# Add in 2pct discount case (four scenarios)
+fig, ax = pl.subplots(2,2)
+for i, variable in enumerate(['CO2_total_emissions', 'temperature', 'radiative_forcing']):
+    for scenario in ['dice', 'dice_disc2pct', 'dice_below2deg', 'dice_1p5deglowOS']:
+        ax[i//2,i%2].fill_between(
+            np.arange(2023, 2134, 3),
+            np.nanpercentile(outputs[scenario][variable][:37, :], 5, axis=1),
+            np.nanpercentile(outputs[scenario][variable][:37, :], 95, axis=1),
+            color=colors[scenario],
+            alpha=0.2,
+            lw=0
+        )
+        # ax[i//2,i%2].fill_between(
+        #     np.arange(2023, 2134, 3),
+        #     np.nanpercentile(outputs[scenario][variable][:37, :], 16, axis=1),
+        #     np.nanpercentile(outputs[scenario][variable][:37, :], 84, axis=1),
+        #     color=colors[scenario],
+        #     alpha=0.2,
+        #     lw=0
+        # )
+        ax[i//2,i%2].plot(
+            np.arange(2023, 2134, 3),
+            np.nanmedian(outputs[scenario][variable][:37, :], axis=1),
+            color=colors[scenario],
+            label=labels[scenario],
+        )
+    ax[i//2,i%2].set_xlim(2023,2125)
+    ax[i//2,i%2].set_title(title[variable])
+    ax[i//2,i%2].set_ylabel(yunit[variable])
+    ax[i//2,i%2].set_ylim(ylim[variable])
+    ax[i//2,i%2].set_xticks(np.arange(2025, 2130, 25))
+    ax[i//2,i%2].axhline(0, ls=':', color='k')
+    ax[i//2,i%2].axvline(2100, ls=':', color='k')
+ax[1,0].legend(fontsize=6, frameon=False, loc='upper left')
+fig.tight_layout()
+
+for scenario in ['dice', 'dice_disc2pct', 'dice_below2deg', 'dice_1p5deglowOS']:
+    ax[1,1].hist(
+        outputs[scenario]['social_cost_of_carbon'][0, :],
+        alpha=0.5,
+        label=labels[scenario],
+        color=colors[scenario],
+        density=True,
+        bins=np.logspace(-1, 4, 101),
+        log=True
+    )
+ax[1,1].set_xscale('log')
+pl.rcParams['xtick.minor.visible'] = True
+ax[1,1].set_xlim(6, 10000)
+ax[1,1].set_title("(d) Social cost of carbon in 2023")
+ax[1,1].set_xlabel("(2020\$)")
+ax[1,1].set_ylabel("Density")
+ax[1,1].set_yticklabels([])
+ax[1,1].xaxis.set_major_formatter(ScalarFormatter())
+
+line_this = Line2D([0], [0], label='Median', color='k')
+# u68_this = Patch(facecolor='k', lw=0, alpha=0.4, label='16-84% range')
+u90_this = Patch(facecolor='k', lw=0, alpha=0.2, label='5-95% range')
+ax[0,1].legend(handles=[line_this, u90_this], fontsize=6, frameon=False, loc='upper left')
+
+fig.tight_layout()
+pl.savefig(os.path.join(here, '..', 'figures', f'projections_scc_ecs_fourscen.png'))
+pl.savefig(os.path.join(here, '..', 'figures', f'projections_scc_ecs_fourscen.pdf'))
 pl.show()
