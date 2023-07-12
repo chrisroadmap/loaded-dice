@@ -57,10 +57,10 @@ ylim = {
     'CO2_FFI_emissions': (-20, 55),
     'CO2_AFOLU_emissions': (-6, 7),
     'CO2_total_emissions': (-20, 55),
-    'CO2_concentration': (250, 700),
+    'CO2_concentration': (350, 700),
     'temperature': (0.5, 4),
     'social_cost_of_carbon': (0, 4000),
-    'radiative_forcing': (0, 7)
+    'radiative_forcing': (2, 7)
 }
 labels = {
     'dice': "'optimal'",
@@ -126,7 +126,8 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
 
 fig, ax = pl.subplots(2,2)
 for i, variable in enumerate(['CO2_total_emissions', 'CO2_concentration', 'temperature', 'radiative_forcing']):
-    for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
+    #for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
+    for scenario in ['dice']:
         ax[i//2,i%2].fill_between(
             np.arange(2023, 2134, 3),
             np.nanpercentile(outputs[scenario][variable][:37, :], 5, axis=1),
@@ -153,15 +154,15 @@ for i, variable in enumerate(['CO2_total_emissions', 'CO2_concentration', 'tempe
         ax[i//2,i%2].plot(
             np.arange(2020, 2135, 5),
             dice2023[scenario][variable][:23],
-            color=colors[scenario],
-            ls='--',
+            color='green',
+            ls='-',
         )
         # DICE2016R
         ax[i//2,i%2].plot(
             np.arange(2015, 2135, 5),
             dice2016[scenario][variable][:24],
-            color=colors[scenario],
-            ls=':',
+            color='orangered',
+            ls='-',
         )
     ax[i//2,i%2].set_xlim(2015,2125)
     ax[i//2,i%2].set_title(title[variable])
@@ -170,13 +171,12 @@ for i, variable in enumerate(['CO2_total_emissions', 'CO2_concentration', 'tempe
     ax[i//2,i%2].set_xticks(np.arange(2025, 2130, 25))
     ax[i//2,i%2].axhline(0, ls=':', color='k')
     #ax[i//2,i%2].axvline(2100, ls=':', color='k')
-ax[1,1].legend(fontsize=6, frameon=False, loc='upper left')
 
-line_this = Line2D([0], [0], label='this study (median)', color='k')
-u90_this = Patch(facecolor='k', lw=0, alpha=0.2, label='this study (5-95% range)')
-line_2023 = Line2D([0], [0], label='DICE2023', color='k', ls='--')
-line_2016 = Line2D([0], [0], label='DICE2016', color='k', ls=':')
-ax[1,0].legend(handles=[line_this, u90_this, line_2023, line_2016], fontsize=6, frameon=False, loc='upper left')
+line_this = Line2D([0], [0], label='this study (median)', color=colors['dice'])
+u90_this = Patch(facecolor=colors['dice'], lw=0, alpha=0.2, label='this study (5-95% range)')
+line_2023 = Line2D([0], [0], label='DICE2023', color='green', ls='-')
+line_2016 = Line2D([0], [0], label='DICE2016', color='orangered', ls='-')
+ax[1,1].legend(handles=[line_this, u90_this, line_2023, line_2016], fontsize=6, frameon=False, loc='upper left')
 
 fig.tight_layout()
 
@@ -186,6 +186,20 @@ pl.show()
 
 
 fig, ax = pl.subplots(figsize=(8.9/2.54, 8.9/2.54))
+# DICE2023R
+ax.plot(
+    np.arange(2020, 2155, 5),
+    dice2023[scenario]['CO2_AFOLU_emissions'][:27],
+    color='green',
+    ls='-',
+)
+# DICE2016R
+ax.plot(
+    np.arange(2015, 2155, 5),
+    dice2016[scenario]['CO2_AFOLU_emissions'][:28],
+    color='orangered',
+    ls='-',
+)
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     ax.fill_between(
         np.arange(2023, 2155, 3),
@@ -201,20 +215,7 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
         color=colors[scenario],
         label=labels[scenario],
     )
-# DICE2023R
-ax.plot(
-    np.arange(2020, 2155, 5),
-    dice2023[scenario]['CO2_AFOLU_emissions'][:27],
-    color='k',
-    ls='--',
-)
-# DICE2016R
-ax.plot(
-    np.arange(2015, 2155, 5),
-    dice2016[scenario]['CO2_AFOLU_emissions'][:28],
-    color='k',
-    ls=':',
-)
+
 ax.set_xlim(2015,2150)
 ax.set_title(title['CO2_AFOLU_emissions'])
 ax.set_ylabel(yunit['CO2_AFOLU_emissions'])
@@ -227,10 +228,10 @@ ax.plot(gcp_df.Year, gcp_df["land-use change emissions"]*3.664, color='k', label
 
 line_opt = Line2D([0], [0], label='"Optimal"', color=colors['dice'])
 line_20c = Line2D([0], [0], label='Well-below 2°C', color=colors['dice_below2deg'])
-line_15c = Line2D([0], [0], label='1.5°C low overshoot', color=colors['dice_1p5deglowOS'])
+line_15c = Line2D([0], [0], label='1.5°C overshoot', color=colors['dice_1p5deglowOS'])
 u90_this = Patch(facecolor='k', lw=0, alpha=0.2, label='5-95% ranges')
-line_2023 = Line2D([0], [0], label='DICE2023', color='k', ls='--')
-line_2016 = Line2D([0], [0], label='DICE2016', color='k', ls=':')
+line_2023 = Line2D([0], [0], label='DICE2023', color='green', ls='-')
+line_2016 = Line2D([0], [0], label='DICE2016', color='orangered', ls='-')
 line_gcp = Line2D([0], [0], label='Global Carbon Project', color='k')
 
 ax.legend(handles=[line_opt, line_20c, line_15c, u90_this, line_2023, line_2016, line_gcp], fontsize=6, frameon=False, loc='upper right')

@@ -48,11 +48,11 @@ fig, ax = pl.subplots()
 
 ax.semilogy(np.arange(2020, 2520, 5), data_combined.T/1e6, zorder=-7, lw=0.5, color='0.7')
 ax.semilogy(np.arange(2020, 2520, 5), np.median(data_combined.T/1e6, axis=1), lw=1.5, zorder=-6, color='k')
-ax.semilogy(np.arange(2015, 2515, 5), 0.001*df_dice2016.loc['Population', :].values.astype(float), lw=1.5, zorder=-6.3, color='orange')
+ax.semilogy(np.arange(2015, 2515, 5), 0.001*df_dice2016.loc['Population', :].values.astype(float), lw=1.5, zorder=-6.3, color='orangered')
 ax.semilogy(np.arange(2020, 2525, 5), 0.001*df_dice2023.loc['Population', :].values[0,:].astype(float), lw=1.5, zorder=-6.5, color='green')
 line_rff_ens = Line2D([0], [0], label='RFF-SPs extended ensemble members', color='0.7')
 line_rff_med = Line2D([0], [0], label='RFF-SPs extended median (this study)', color='k')
-line_2016 = Line2D([0], [0], label='DICE-2016R', color='orange')
+line_2016 = Line2D([0], [0], label='DICE-2016R', color='orangered')
 line_2023 = Line2D([0], [0], label='DICE-2023R', color='green')
 
 ax.legend(handles=[line_rff_ens, line_rff_med, line_2023, line_2016], fontsize=6, frameon=False, loc='lower left')

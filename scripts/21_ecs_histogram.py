@@ -52,7 +52,7 @@ pl.rcParams['figure.dpi'] = 150
 
 outputs = {}
 
-for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
+for scenario in ['dice', 'dice_disc2pct', 'dice_below2deg', 'dice_1p5deglowOS']:
     outputs[scenario] = {}
     df = pd.read_csv(os.path.join(here, '..', 'data_output', 'results', f'{scenario}__social_cost_of_carbon.csv'), index_col=0)
     outputs[scenario]['social_cost_of_carbon'] = df[:].T.values[0, :]
@@ -63,12 +63,14 @@ for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
 
 labels = {
     'dice': "'Optimal'",
+    'dice_disc2pct': "Rennert et al.",
     'dice_below2deg': "2°C",
     'dice_1p5deglowOS': "1.5°C"
 }
 
 colors = {
     'dice': "#003f5c",
+    'dice_disc2pct': "#1b98e0",
     'dice_below2deg': "#bc5090",
     'dice_1p5deglowOS': "#ffa600"
 }
@@ -76,8 +78,6 @@ colors = {
 fig, ax = pl.subplots(2, 2)
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     ax[0,0].scatter(ecs, outputs[scenario]['social_cost_of_carbon'], alpha=0.3, label=labels[scenario], color=colors[scenario])
-    lr = linregress(ecs, outputs[scenario]['social_cost_of_carbon'])
-    print(lr)
     #ax[0].plot(np.linspace(1.4, 7.5), lr.slope*np.linspace(1.4, 7.5) + lr.intercept, color='k')
 ax[0,0].set_yscale('log')
 ax[0,0].set_xlim(1, 8)
@@ -89,8 +89,6 @@ ax[0,0].yaxis.set_major_formatter(ScalarFormatter())
 
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     ax[0,1].scatter(ecs, outputs[scenario]['CO2_total_emissions_2050'], alpha=0.3, label=labels[scenario], color=colors[scenario])
-    lr = linregress(ecs, outputs[scenario]['CO2_total_emissions_2050'])
-    print(lr)
     #ax.plot(np.linspace(1.4, 7.5), lr.slope*np.linspace(1.4, 7.5) + lr.intercept, color='k')
 ax[0,1].set_xlim(1, 8)
 ax[0,1].set_ylim(-20, 60)
@@ -105,8 +103,6 @@ ax[0,1].yaxis.set_major_formatter(ScalarFormatter())
 
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     ax[1,0].scatter(df_aerosol.values.squeeze(), outputs[scenario]['social_cost_of_carbon'], alpha=0.3, label=labels[scenario], color=colors[scenario])
-    lr = linregress(df_aerosol.values.squeeze(), outputs[scenario]['social_cost_of_carbon'])
-    print(lr)
     #ax.plot(np.linspace(1.4, 7.5), lr.slope*np.linspace(1.4, 7.5) + lr.intercept, color='k')
 ax[1,0].set_yscale('log')
 ax[1,0].set_xlim(-2.7, 0.2)
@@ -118,8 +114,6 @@ ax[1,0].yaxis.set_major_formatter(ScalarFormatter())
 
 for scenario in ['dice', 'dice_below2deg', 'dice_1p5deglowOS']:
     ax[1,1].scatter(df_aerosol.values.squeeze(), outputs[scenario]['CO2_total_emissions_2050'], alpha=0.3, label=labels[scenario], color=colors[scenario])
-    lr = linregress(df_aerosol.values.squeeze(), outputs[scenario]['CO2_total_emissions_2050'])
-    print(lr)
     #ax.plot(np.linspace(1.4, 7.5), lr.slope*np.linspace(1.4, 7.5) + lr.intercept, color='k')
 ax[1,1].set_xlim(-2.7, 0.2)
 ax[1,1].set_ylim(-20, 60)
@@ -132,4 +126,66 @@ ax[1,1].legend(frameon=True)
 fig.tight_layout()
 pl.savefig(os.path.join(here, '..', 'figures', f'correlations.png'))
 pl.savefig(os.path.join(here, '..', 'figures', f'correlations.pdf'))
+pl.show()
+
+
+fig, ax = pl.subplots(2, 2)
+for scenario in ['dice', 'dice_disc2pct', 'dice_below2deg', 'dice_1p5deglowOS']:
+    ax[0,0].scatter(ecs, outputs[scenario]['social_cost_of_carbon'], alpha=0.3, label=labels[scenario], color=colors[scenario])
+    lr = linregress(ecs, outputs[scenario]['social_cost_of_carbon'])
+    print(scenario, lr)
+    #ax[0].plot(np.linspace(1.4, 7.5), lr.slope*np.linspace(1.4, 7.5) + lr.intercept, color='k')
+ax[0,0].set_yscale('log')
+ax[0,0].set_xlim(1, 8)
+ax[0,0].set_ylim(5, 12000)
+ax[0,0].set_title("(a) ECS v SCC")
+ax[0,0].set_ylabel("Social cost of carbon, 2020\$")
+ax[0,0].set_xlabel("ECS, °C")
+ax[0,0].yaxis.set_major_formatter(ScalarFormatter())
+
+for scenario in ['dice', 'dice_disc2pct', 'dice_below2deg', 'dice_1p5deglowOS']:
+    ax[0,1].scatter(ecs, outputs[scenario]['CO2_total_emissions_2050'], alpha=0.3, label=labels[scenario], color=colors[scenario])
+    lr = linregress(ecs, outputs[scenario]['CO2_total_emissions_2050'])
+    print(scenario, lr)
+    #ax.plot(np.linspace(1.4, 7.5), lr.slope*np.linspace(1.4, 7.5) + lr.intercept, color='k')
+ax[0,1].set_xlim(1, 8)
+ax[0,1].set_ylim(-20, 60)
+ax[0,1].set_title("(b) ECS v 2050 CO$_2$ emissions")
+ax[0,1].set_ylabel("Emissions in 2050, Gt CO$_2$ yr$^{-1}$")
+ax[0,1].set_xlabel("ECS, °C")
+ax[0,1].yaxis.set_major_formatter(ScalarFormatter())
+#ax[1].legend(frameon=True)
+# ax[0,1].text(7.7, 25, "'Optimal'", ha='right', color=colors['dice'], fontweight='bold')
+# ax[0,1].text(7.7, 18, "2°C", ha='right', color=colors['dice_below2deg'], fontweight='bold')
+# ax[0,1].text(7.7, 11, "1.5°C", ha='right', color=colors['dice_1p5deglowOS'], fontweight='bold')
+
+for scenario in ['dice', 'dice_disc2pct', 'dice_below2deg', 'dice_1p5deglowOS']:
+    ax[1,0].scatter(df_aerosol.values.squeeze(), outputs[scenario]['social_cost_of_carbon'], alpha=0.3, label=labels[scenario], color=colors[scenario])
+    lr = linregress(df_aerosol.values.squeeze(), outputs[scenario]['social_cost_of_carbon'])
+    print(scenario, lr)
+    #ax.plot(np.linspace(1.4, 7.5), lr.slope*np.linspace(1.4, 7.5) + lr.intercept, color='k')
+ax[1,0].set_yscale('log')
+ax[1,0].set_xlim(-2.7, 0.2)
+ax[1,0].set_ylim(5, 12000)
+ax[1,0].set_title("(c) 2014 aerosol ERF v SCC")
+ax[1,0].set_ylabel("Social cost of carbon, 2020\$")
+ax[1,0].set_xlabel("Aerosol ERF in 2014, W m$^{-2}$")
+ax[1,0].yaxis.set_major_formatter(ScalarFormatter())
+
+for scenario in ['dice', 'dice_disc2pct', 'dice_below2deg', 'dice_1p5deglowOS']:
+    ax[1,1].scatter(df_aerosol.values.squeeze(), outputs[scenario]['CO2_total_emissions_2050'], alpha=0.3, label=labels[scenario], color=colors[scenario])
+    lr = linregress(df_aerosol.values.squeeze(), outputs[scenario]['CO2_total_emissions_2050'])
+    print(scenario, lr)
+    #ax.plot(np.linspace(1.4, 7.5), lr.slope*np.linspace(1.4, 7.5) + lr.intercept, color='k')
+ax[1,1].set_xlim(-2.7, 0.2)
+ax[1,1].set_ylim(-20, 60)
+ax[1,1].set_title("(d) 2014 aerosol ERF v 2050 CO$_2$ emissions")
+ax[1,1].set_ylabel("Emissions in 2050, Gt CO$_2$ yr$^{-1}$")
+ax[1,1].set_xlabel("Aerosol ERF in 2014, W m$^{-2}$")
+ax[1,1].yaxis.set_major_formatter(ScalarFormatter())
+ax[1,1].legend(frameon=True)
+
+fig.tight_layout()
+# pl.savefig(os.path.join(here, '..', 'figures', f'correlations.png'))
+# pl.savefig(os.path.join(here, '..', 'figures', f'correlations.pdf'))
 pl.show()
