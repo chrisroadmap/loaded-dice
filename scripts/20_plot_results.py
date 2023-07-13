@@ -140,7 +140,8 @@ for i, variable in enumerate(['CO2_total_emissions', 'temperature', 'radiative_f
     ax[i//2,i%2].set_ylabel(yunit[variable])
     ax[i//2,i%2].set_ylim(ylim[variable])
     ax[i//2,i%2].set_xticks(np.arange(2025, 2130, 25))
-    ax[i//2,i%2].axhline(0, ls=':', color='k')
+    if i==0:
+        ax[i//2,i%2].axhline(0, ls=':', color='k')
     ax[i//2,i%2].axvline(2100, ls=':', color='k')
 ax[1,0].legend(fontsize=6, frameon=False)
 fig.tight_layout()
@@ -206,7 +207,8 @@ for i, variable in enumerate(['CO2_total_emissions', 'temperature', 'radiative_f
     ax[i//2,i%2].set_ylabel(yunit[variable])
     ax[i//2,i%2].set_ylim(ylim[variable])
     ax[i//2,i%2].set_xticks(np.arange(2025, 2130, 25))
-    ax[i//2,i%2].axhline(0, ls=':', color='k')
+    if i==0:
+        ax[i//2,i%2].axhline(0, ls=':', color='k')
     ax[i//2,i%2].axvline(2100, ls=':', color='k')
 ax[1,0].legend(fontsize=6, frameon=False, loc='upper left')
 fig.tight_layout()
