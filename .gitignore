@@ -9,6 +9,7 @@ Thumbs.db
 *.put
 scripts/*.csv
 scripts/*.*log*
+dice2023/*.*log*
 
 # GAMS working files
 225?/
