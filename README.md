@@ -22,3 +22,6 @@ A pre-print is available at https://arxiv.org/abs/2304.08957.
 4. Run the scripts in numerical order from the `scripts` directory
 
 `python scripts/<script_name.py>`
+
+## Notes and acknowledgements
+The `dice2016` and `dice2023` folders contain supplementary GAMS code from the online appendix of [Barrage & Nordhaus (2023)](https://www.nber.org/papers/w31112). The original source of this material is [here](https://bit.ly/3TwJ5nO). In order to present results from these simulations with DICE2016 and DICE2023 for full reproducibility, the GAMS code and the output CSV results have been included in this repository. No clear licence was provided for these files. The attribution for this source code should go to Barrage & Nordhaus.
