@@ -1,5 +1,7 @@
 # loaded-dice
-Investigating the impact of climate uncertainty on climate economics using a simple cost-benefit IAM (DICE) with the climate component updated with a calibrated, constrained Monte Carlo ensemble of the FaIR model (v2.1). Paper submitted.
+Investigating the impact of climate uncertainty on climate economics using a simple cost-benefit IAM (DICE) with the climate component updated with a calibrated, constrained Monte Carlo ensemble of the FaIR model (v2.1). Paper in review.
+
+A pre-print is available at https://arxiv.org/abs/2304.08957.
 
 ![Effect of varying climate uncertainty on projections](figures/projections_scc_ecs.png?raw=true)
 
