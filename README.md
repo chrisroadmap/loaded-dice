@@ -1,4 +1,7 @@
 # loaded-dice
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7682442.svg)](https://doi.org/10.5281/zenodo.7682442)
+
 Investigating the impact of climate uncertainty on climate economics using a simple cost-benefit IAM (DICE) with the climate component updated with a calibrated, constrained Monte Carlo ensemble of the FaIR model (v2.1). Paper in review.
 
 A pre-print is available at https://arxiv.org/abs/2304.08957.
