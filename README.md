@@ -2,9 +2,10 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7682442.svg)](https://doi.org/10.5281/zenodo.7682442)
 
-Investigating the impact of climate uncertainty on climate economics using a simple cost-benefit IAM (DICE) with the climate component updated with a calibrated, constrained Monte Carlo ensemble of the FaIR model (v2.1). Paper in review.
+Investigating the impact of climate uncertainty on climate economics using a simple cost-benefit IAM (DICE) with the climate component updated with a calibrated, constrained Monte Carlo ensemble of the FaIR model (v2.1). 
 
-A pre-print is available at https://arxiv.org/abs/2304.08957.
+## Paper
+Smith, Christopher J., Alaa Al Khourdajie, Pu Yang, and Doris Folini. ‘Climate Uncertainty Impacts on Optimal Mitigation Pathways and Social Cost of Carbon’. Environmental Research Letters 18, no. 9 (August 2023): 094024. https://doi.org/10.1088/1748-9326/acedc6.
 
 ![Effect of varying climate uncertainty on projections](figures/projections_scc_ecs.png?raw=true)
 
